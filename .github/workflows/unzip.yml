@@ -1,0 +1,25 @@
+name: Unzip Plugins
+on: [workflow_dispatch] # This lets you run it manually with a button
+
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Unzip all files
+        run: |
+          for f in *.zip; do 
+            unzip -o "$f" -d "${f%.zip}"
+            rm "$f"
+          done
+          
+      - name: Commit unzipped files
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .
+          git commit -m "Unzipped plugins for Gemini"
+          git push
