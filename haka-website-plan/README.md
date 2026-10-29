@@ -1,148 +1,251 @@
-# Haka Restaurant: Website Rebuild & Two-Location Plan
+# HAKKA Restaurant: Website Fix, Two-Location Rebuild & Booking Plugin
 
-**Status:** Draft working plan · **Created:** 29 Oct 2026 · **Owner:** Kiel
-**Sites in scope:** main site (hakkarestaurant.com) and online ordering (order.hakkarestaurant.com), both on WordPress + WooCommerce
+**Status:** Working plan · **Created:** 29 Oct 2026 · **Owner:** Kiel
+**Sites:** hakkarestaurant.com (main) · order.hakkarestaurant.com (online ordering)
+**Platform:** WordPress + WooCommerce (Elementor). We keep this stack and rebuild *on* it, as the audit recommends.
+**Source:** *HAKKA Restaurant – Technical & Strategic Audit* (4-page PDF)
 
-> This folder is temporary. Move it to its proper repo or path when you have GitHub access again.
-
----
-
-## 0. Before we start: open items
-
-| # | Item | Why it matters |
-|---|------|----------------|
-| 0.1 | **Find the earlier audit document.** I searched your Google Drive and Gmail and couldn't find it. Paste or link it so its findings can go into Section 2. | That audit is the "fix" list. Section 2 is a placeholder until we have it. |
-| 0.2 | **Confirm the domain spelling.** You wrote *hakarestaurant.com*, but your email is *@hakkarestaurant.com*. | We need the right domain for DNS, SSL, redirects and SEO. |
-| 0.3 | **Get admin access and a full backup of both sites** (files and database). | We need it before any rebuild work. |
-| 0.4 | **Get the facts for each location:** address, phone, WhatsApp, hours, map pin, menu and price differences, delivery zones, seating capacity, table layout. | These drive the location tabs, the booking plugin and checkout. |
-| 0.5 | **Gather brand assets for each location:** logo variants, photos (the Ironside Media shoot in Drive › *Hakka*), colour accents, and any interior or vibe differences. | We need these for the "look and feel" of each location. |
-
-I couldn't reach either site from this cloud session, because outbound access to those domains is blocked here. Do the live-site audit in Phase 1 from your own machine.
+> This folder is temporary. Move it to the right place when you have GitHub access again.
 
 ---
 
-## 1. Goals
+## Overview
 
-1. **Rebuild and clean up** both sites. Fix everything from the audit, plus anything new we find.
-2. **Run two locations, Port of Spain and Brentwood**, with clear tabs. Each tab gets its own look, information, menu and ordering.
-3. **Add table booking** with a custom plugin that knows about both locations.
-4. Keep online ordering working the whole time. No downtime on order.hakkarestaurant.com during service hours.
+| Workstream | What | Section |
+|---|---|---|
+| **1. Fix** | Every defect in the audit, on both sites | §1 |
+| **2. SEO & tracking** | Meta titles/descriptions, schema, GA4, Meta Pixel, all location-aware | §2 |
+| **3. Two locations** | Location tabs for **Port of Spain** and **Brentwood**, each with its own look and feel | §3 |
+| **4. Booking plugin** | Custom HAKKA reservations plugin covering both locations, replacing Amelia | §4 |
 
----
-
-## 2. Fixes from the earlier audit (placeholder)
-
-> Fill this in from the audit document (item 0.1). Give each finding a row.
-
-| ID | Site | Page / area | Issue | Fix | Priority | Status |
-|----|------|-------------|-------|-----|----------|--------|
-| A-01 | | | | | | ☐ |
-| A-02 | | | | | | ☐ |
-
-**Standard checks we'll run on both sites anyway:**
-- [ ] WordPress core, theme and plugin updates. Remove unused plugins and themes.
-- [ ] PHP version, Site Health, PHP error log
-- [ ] SSL, plus www/non-www and http→https redirects. Check the order subdomain's cookies and sessions.
-- [ ] Page speed: image sizes (WebP), caching, lazy-loading, render-blocking CSS/JS
-- [ ] Mobile layout on every key page
-- [ ] Broken links, 404s, placeholder or lorem text, outdated hours, prices and phone numbers
-- [ ] SEO: titles, meta descriptions, Open Graph images, sitemap, robots.txt, `Restaurant` + `LocalBusiness` schema **for each location**
-- [ ] Google Business Profile for each location, linked to the matching location page
-- [ ] Accessibility basics: contrast, alt text, focus states, form labels
-- [ ] WooCommerce: payment gateways, tax, emails (branding + location details), order statuses, test orders
-- [ ] Legal pages: privacy, terms, refund policy, cookie notice
-- [ ] Analytics and conversion tracking (orders + bookings), set up per location
+The order matters. Fix first: those are live defects customers see today. Then we restructure for two locations. SEO goes in last, so we write it once, per location.
 
 ---
 
-## 3. Two locations: Port of Spain | Brentwood
+## §1 Fixes from the audit
 
-### 3.1 What the customer sees
-- **Main site:** a location switcher at the top of the homepage with two big tabs, **Port of Spain** and **Brentwood**. The header also gets a persistent "Your location: ___ ▾" control.
-- Picking a tab switches:
-  - hero image/video, colour accent and tagline (each location's "look and feel")
-  - address, map, phone/WhatsApp, hours, holiday hours
-  - menu (shared items + location-only items + location prices)
-  - **Order Online** button → order site with that location pre-selected
-  - **Book a Table** button → booking form with that location pre-selected
-  - gallery, reviews and specials for that location
-- The choice is remembered (cookie + WooCommerce session) and carried over to the order site.
-- Each location gets its own URL for SEO and sharing: `/port-of-spain/` and `/brentwood/`. The homepage tabs link to them, and the root homepage shows a neutral "Choose your location" state, or the last location the visitor picked.
+Tick each box once it's fixed **and checked on the live site**. "Effort" is a rough estimate: **S** under 30 minutes, **M** a few hours, **L** a day or more.
 
-### 3.2 How we build it
-- **Reuse what we already have.** `mc-multistore` (in this repo) already has:
-  - an `mc_location` post type with details, hours, ordering intervals, staff and SEO meta boxes (`mc-multistore/mc-multistore/includes/class-mc-locations.php`)
-  - an active-location session (`mc_active_location`, cookie `mc_loc_id`) and checkout validation (`mc-multistore/mc-multistore/mc-multistore.php`)
-  - the `[mc_store_locator]` and `[mc_active_store_btn]` shortcodes
-- **What to add:**
-  - [ ] **Theme fields for each location** on `mc_location`: accent colour, hero media, logo variant, tagline, gallery. Output them as CSS custom properties (`--loc-accent`, etc.) so the whole page re-themes when the location changes.
-  - [ ] **A `[mc_location_tabs]` shortcode or block** that renders the Port of Spain / Brentwood tab UI and sets the active location.
-  - [ ] **Location-aware menu:** a product → location assignment (taxonomy or meta), per-location price overrides, and per-location stock or "86'd" availability.
-  - [ ] **Cross-domain handoff:** main site → `order.` subdomain with `?loc=<id>`, which the order site reads into its session.
-  - [ ] **Per-location store hours** enforced at checkout, which is already partly done. Check holiday closures.
-  - [ ] **Routing orders to staff by location** in `mealcrafter-store-manager` and `mc-order-alerts`. Check that Brentwood staff only see Brentwood orders.
-  - [ ] **Per-location receipts and emails:** address, phone, and the QR pickup code (`mealcrafter-qr-scanner`).
-  - [ ] **Decide on loyalty** (`mealcrafter-loyalty`): are points shared across locations? (Recommended: yes.)
+### 1A. hakkarestaurant.com: broken links and routing
 
-### 3.3 Things to fix that I spotted in this repo
-- [ ] Two places register the `[mealcrafter]` shortcode: `mc-core/mc-core/mc-core.php:24` and `mc-core/mc-core/includes/class-mc-shortcodes.php:8`. Whichever loads last silently wins. Keep one.
-- [ ] The plugins were committed as unzipped uploads, with no build or version control conventions. Before the rebuild, set up one plugin per folder with a changelog and version bumps.
+| # | Issue | Fix | Effort | ☐ |
+|---|---|---|---|---|
+| M-01 | **"Our Story" page is blank** (`/hakka-story/`): an empty Elementor layout | Write the brand heritage copy and add photos (from the Ironside Media shoot in Drive › *Hakka*). Mention **both** locations. | M | ☐ |
+| M-02 | **Instagram feed shows raw shortcode** `[instagram-feed feed=3]` on `/hakka-social/` | Re-authorize Smash Balloon, or point the shortcode at the correct feed ID. Consider one feed per location if each has its own account. | S | ☐ |
+| M-03 | **Phone link broken** in the homepage 4-box strip (打电话): `http://+1-868-334-2552` | Change to `tel:+18683342552`. It becomes location-aware in §3. | S | ☐ |
+| M-04 | **Dead buttons** on `/celebrations/` ("Select Pickup" / "Select Delivery" are `href="#"`) | Link to `https://order.hakkarestaurant.com/`, carrying the location (§3). | S | ☐ |
+| M-05 | **Booking links are inconsistent**: the header and hero go to `/reservations/`, the homepage quick-links go to `/celebrations/` | Point every booking button to `/reservations/`. That page becomes the new booking plugin (§4). | S | ☐ |
+| M-06 | **"Get Directions" starts from a fixed point in Trincity** (10.6201088, -61.3613568) | Brentwood: use `https://maps.app.goo.gl/bJTW3FgporBSnryh9`. Port of Spain: create its Google Maps place link. Directions must not have a fixed starting point. | S | ☐ |
 
----
+### 1B. hakkarestaurant.com: security and mixed content (HTTP vs. HTTPS)
 
-## 4. Table booking plugin: `mealcrafter-bookings` (new)
+| # | Issue | Fix | Effort | ☐ |
+|---|---|---|---|---|
+| M-07 | Sitewide preloader GIF loads over `http://` (`/wp-content/uploads/2024/11/hakkabox-animated.gif`), so browsers don't show the padlock | Switch to `https://`. Check whether the preloader is even worth keeping, since it slows the first page load. | S | ☐ |
+| M-08 | Food and drinks menu PDFs load over `http://`. The drinks PDF is called `55511_SpiceFusion_Brentwood_drink.pdf` (another brand's name). | Re-upload as `Hakka_Drinks_Menu_Brentwood.pdf` / `Hakka_Food_Menu_Brentwood.pdf` over HTTPS. Add the Port of Spain versions. | S | ☐ |
+| M-09 | Order buttons on `/catering/` link to `http://order.hakkarestaurant.com` | Switch to `https://`. | S | ☐ |
+| M-10 | *(Sitewide sweep)* Other `http://` links probably exist | Run Better Search Replace `http://hakkarestaurant.com` → `https://…` (and the same for `order.`) on both databases. Set "Force HTTPS" at the host or in Cloudflare. | S | ☐ |
 
-### 4.1 Customer flow
-1. Choose a **location** (pre-filled from the active location)
-2. Choose **party size** → **date** → only the **time slots** that still have room
-3. Enter **name, phone, email** and notes (occasion, allergies, high chair, seating preference)
-4. Confirm. They get an on-screen confirmation, a branded email (+ optional SMS/WhatsApp) and an add-to-calendar link.
-5. Manage the booking from a link in the email: cancel or change it, up to a cutoff.
+### 1C. hakkarestaurant.com: copy, translation and typos
 
-### 4.2 Staff / admin
-- **Settings for each location:** service periods (lunch/dinner), slot length, typical table turn time, max covers per slot, max party size online, lead time, how far ahead people can book, blackout dates, holiday hours
-- **Tables (optional, phase 2):** table list with capacity, combinable tables, floor zones
-- **Booking list and day view** for each location: statuses (pending → confirmed → seated → completed / no-show / cancelled), walk-ins, notes
-- Staff see only their own location (reuse the staff assignment from `mc_location`)
-- **Notifications:** new-booking alert to the location (reuse the `mc-order-alerts` sound/popup engine), plus a reminder to the customer 24h / 3h before
-- **Large parties / events:** request-only bookings above N guests (manual approval), with an optional deposit through WooCommerce
-- **Export:** CSV, plus basic reports (covers per day, no-show rate)
+| # | Issue | Fix | Effort | ☐ |
+|---|---|---|---|---|
+| M-11 | The homepage "Order Now" Chinese label says **命令** (a military or computer "command") | Change to **点餐** or **立即点餐**. While we're there, have a native speaker check every other Chinese label. | S | ☐ |
+| M-12 | Typo: "Caramel Cheesecak Flan" | Change to "Caramel Cheesecake Flan". | S | ☐ |
+| M-13 | `/reservations/` lists Friday–Saturday hours as **11am – 12pm** | Change to **11am – 12am (midnight)**. Hours become per location in §3. | S | ☐ |
+| M-14 | The `/menu/` intro has lowercase proper nouns ("chinese", "indian", "tangra", "at HAKKA") | Correct the capitalization and grammar. | S | ☐ |
+| M-15 | The footer copyright sits in an `<h1>`, says **2025**, and the address repeats "BRENTWOOD" twice | Change the tag to `<p>`, use a dynamic year (`[year]` or `date('Y')`), and show both location addresses correctly. | S | ☐ |
 
-### 4.3 Technical outline
-- Its own plugin in the MealCrafter family, depending on `mc-core` and `mc-multistore` (uses `mc_location`)
-- A custom DB table `wp_mc_bookings` (not post meta) so slot lookups stay fast
-- REST endpoints: `GET /mc/v1/bookings/availability`, `POST /mc/v1/bookings`, `PATCH /mc/v1/bookings/{token}`
-- Front end: a `[mc_booking_form location="auto"]` shortcode or block
-- Security: nonces, rate limiting, honeypot / Turnstile, a signed manage-booking token
-- Timezone: America/Port_of_Spain (AST, UTC-4, no DST)
-- Spam and no-show control: phone verification (optional), and blocklisting repeat no-shows
+### 1D. order.hakkarestaurant.com
 
-### 4.4 Questions to answer
-- [ ] Do both locations take bookings, or only one?
-- [ ] Do we need table-level assignment on day one, or is a covers-per-slot cap enough?
-- [ ] Deposits or card holds for large parties?
-- [ ] SMS/WhatsApp provider (Twilio, WhatsApp Business API) or email only?
-- [ ] Does it need to sync with an existing system (OpenTable, Google Reserve)?
+| # | Issue | Fix | Effort | ☐ |
+|---|---|---|---|---|
+| O-01 | Customers can see the **"Uncategorized"** category | Move those products into real categories and hide empty categories from the category bar. | S | ☐ |
+| O-02 | **The mobile menu shows two link lists.** The working one sends "Make A Reservation" to the homepage. The second list is all `href="#"`. | Delete the dead list. Point "Make A Reservation" to `https://hakkarestaurant.com/reservations/`. | S | ☐ |
+| O-03 | **Dead buttons on `/find-us/`**: "Restaurant Booking" and "Contact us" have empty `href=""` | Point them to the reservations page and to `tel:`. `/find-us/` will show both locations (§3). | S | ☐ |
+| O-04 | **The admin username `adminhakkar` is visible** on `/privacy-policy/`, linked to its author archive. That makes password-guessing attacks easier. | Hide author and date info on pages, block `/author/` archives and `?author=` lookups, and change the display name. Ideally create a new admin with a different username and remove this one. Add 2FA and login rate-limiting. | M | ☐ |
+| O-05 | The privacy policy has **12 table-of-contents links pointing to `hakkaexpress.com`** | Rewrite them as same-page links (`#section`). | S | ☐ |
+| O-06 | Footer copyright is in an `<h1>` and says **2025** | Change to `<p>` with a dynamic year. | S | ☐ |
+
+### 1E. Hardening (needed for "rebuild", not listed in the audit)
+
+| ☐ | Item |
+|---|---|
+| ☐ | Full backup of both sites (files + DB) **before any change**, plus a staging copy of each |
+| ☐ | Update WordPress core, the theme and all plugins. Remove unused plugins and themes. |
+| ☐ | Confirm Cloudflare WAF is on for both domains. Add a security plugin (login limits, 2FA, file-change alerts). |
+| ☐ | Run a test order with each payment gateway (Fygaro / the second gateway named in the audit) after the updates |
+| ☐ | Speed pass: convert images to WebP, enable caching, review the preloader, lazy-load media. Target mobile Lighthouse ≥ 85. |
+| ☐ | Check mobile layout on every key page |
+| ☐ | Set up a weekly update and backup routine |
 
 ---
 
-## 5. Phased plan
+## §2 SEO and tracking
+
+The audit found **no meta descriptions, no schema and no tracking** on either site. Google is currently showing text like *"Calculating fare… Unable to calculate delivery fare"* in search results.
+
+### 2A. Titles and meta descriptions (Rank Math or Yoast)
+
+The audit's wording assumes one location (Brentwood). Updated for two:
+
+| Page | Title tag | Meta description |
+|---|---|---|
+| Home | HAKKA Restaurant \| Chinese, Indian & Thai \| Port of Spain & Chaguanas | Authentic Tangra-style Hakka Chinese, Indian and Thai cuisine in Port of Spain and Brentwood, Chaguanas. Book a table or order online. |
+| Brentwood | HAKKA Brentwood \| Chinese, Indian & Thai Dining in Chaguanas | Visit HAKKA at 200 South Brentwood Avenue, Chaguanas. Tangra-style Hakka, Indian & Thai, cocktails, celebrations. Book or order online. |
+| Port of Spain | HAKKA Port of Spain \| Chinese, Indian & Thai Dining | *(Fill in the address.)* Tangra-style Hakka, Indian & Thai in Port of Spain. Book a table or order online for pickup or delivery. |
+| Menu | Our Menu \| HAKKA Restaurant & Bar | Explore Chicken 65, Momos, Konjee Crispy Chicken, Pad Thai, Thai curries and handcrafted cocktails. |
+| Reservations | Book a Table \| HAKKA Port of Spain & Brentwood | Reserve online at HAKKA Port of Spain or Brentwood. Lunch, dinner, date nights and group celebrations. |
+| Order subdomain | Order Online for Delivery or Pickup \| HAKKA Restaurant | Order your favourite HAKKA dishes for pickup or delivery from Port of Spain or Brentwood. |
+
+### 2B. Restaurant schema (JSON-LD), one block per location
+
+- A `Restaurant` entity for **Brentwood**. Use the audit's block: 200 South Brentwood Avenue, Chaguanas, TT; geo 10.5046519, -61.4055212; +1-868-334-2552. Add `openingHoursSpecification`, `menu` and `hasMap`.
+- A `Restaurant` entity for **Port of Spain** with its own address, geo coordinates, phone and hours (still needed, see §5).
+- Optionally an `Organization` entity ("HAKKA Restaurant") that lists both locations as `department` / `subOrganization`.
+- Each location page outputs its own schema. The homepage outputs the organization plus both locations.
+- Fix the audit's `"acceptsReservations": "True"` → use `true` (a boolean) or the reservations URL.
+
+### 2C. Tracking
+
+| ☐ | Item |
+|---|---|
+| ☐ | Google Tag Manager on both domains (one container, cross-domain linking main ↔ order) |
+| ☐ | GA4 with WooCommerce e-commerce events (`view_item`, `add_to_cart`, `begin_checkout`, `purchase`) and a **`location` parameter** |
+| ☐ | Meta Pixel + Conversions API (Facebook for WooCommerce) |
+| ☐ | A **booking-complete** conversion event from the new booking plugin (§4) |
+| ☐ | Google Ads conversion tag, if ads are planned |
+| ☐ | Google Search Console + sitemap for both domains |
+| ☐ | **A separate Google Business Profile for each location**, linked to that location's page |
+
+---
+
+## §3 Two locations: Port of Spain | Brentwood
+
+### 3A. What the customer sees
+
+**Homepage**
+- A large two-tab switcher near the top: **[ Port of Spain ] [ Brentwood ]**
+- Picking a tab changes the **whole look and feel** without reloading the page:
+  - Hero photo or video and the tagline
+  - Accent colour and decorative details (for example, Port of Spain more urban and modern, Brentwood warmer). Decide this together with the photos.
+  - Address, map, phone/WhatsApp, opening hours and holiday hours
+  - Featured dishes and specials, plus the menu PDFs
+  - Gallery, reviews and the Instagram feed
+  - **Order Online** → `order.hakkarestaurant.com/?loc=port-of-spain` (or `brentwood`)
+  - **Book a Table** → `/reservations/?loc=…`
+- The site remembers the choice (cookie). A returning visitor sees their location first.
+- The header shows a small "📍 Brentwood ▾" switcher on every page.
+
+**Location pages:** `/port-of-spain/` and `/brentwood/`
+- Full pages for each location. The tabs link here, and each gets its own Google Business Profile and schema (§2).
+- Anyone landing from Google sees that location's look right away.
+
+**Pages that become location-aware**
+
+| Page | Change |
+|---|---|
+| `/reservations/` | Location picker at the top, then the new booking form (§4) |
+| `/menu/` | Location toggle. Shared dishes plus location-only items and prices (if they differ) |
+| `/celebrations/`, `/catering/` | Location picker on the enquiry and order buttons |
+| `/hakka-story/` | The brand story, ending in a "Visit us" block with both locations |
+| Footer | Both addresses, phones and hours side by side |
+| order. `/find-us/` | Both locations, each with map, hours, phone and booking link |
+
+### 3B. Ordering site (order.hakkarestaurant.com)
+
+- On first visit, or when the link includes `?loc=`, ask or set **"Ordering from: Port of Spain / Brentwood"** before anything goes in the cart.
+- Separate pickup/delivery settings, delivery zones, hours and lead times for each location
+- Products available per location (hide items that location doesn't sell), with per-location price overrides if needed
+- Order emails, receipts and printed kitchen tickets show the right location's address and phone
+- Each location's kitchen only receives its own orders: check kitchen display and printer routing
+- Switching location with items in the cart warns before clearing unavailable items
+
+### 3C. How we build the look and feel
+
+- Set up each location once, in one place: an admin screen with hero media, accent colours, logo variant, tagline, address, geo coordinates, phone, hours, map link, menu PDFs, Instagram feed ID and Google Business Profile link.
+- The page reads those settings as CSS variables (`--loc-accent`, `--loc-hero`…), so switching tabs re-themes the page instantly.
+- Build the shared sections once in Elementor (global widgets / templates), not duplicated per location, so a fix applies to both.
+- Phone, address and hours come from those settings everywhere, so M-03, M-13 and M-15 can't drift again.
+
+---
+
+## §4 Custom booking plugin: "HAKKA Reservations"
+
+**Replaces:** the Amelia booking widget currently on `/reservations/`. Before switching, export Amelia's existing future bookings and import them into the new system.
+
+### 4A. Guest flow
+1. **Location**, pre-selected from the tab or cookie, and easy to change
+2. **Party size → date → time.** Only times that still have space are shown, using that location's hours.
+3. **Details:** name, phone (TT format), email, occasion (birthday, anniversary, date night, business), dietary notes, seating preference, high chair
+4. **Confirmation** on screen + branded email (+ WhatsApp/SMS if we turn it on) + an add-to-calendar file
+5. A **manage-booking link** in the email to change or cancel, up to a cutoff (for example, 2 hours before)
+6. Groups above a set size (for example, 10 or more) or celebration packages become a **request** that staff approve, with an optional **deposit** paid through WooCommerce and the existing gateway
+
+### 4B. Staff / admin
+- **Settings for each location:** service periods (lunch/dinner), slot interval, table turn time, max covers per slot, max online party size, minimum notice, how far ahead people can book, blackout dates and holiday hours
+- **Today view** for each location: timeline/list, statuses *pending → confirmed → seated → completed / no-show / cancelled*, walk-ins, internal notes
+- **Staff see only their own location.** Managers see both.
+- **Alerts:** a sound/pop-up on the host stand for new bookings, an email to the location's manager, and a reminder to the guest 24 hours before
+- **Guest history:** visit count, no-show count, notes ("prefers booth", "nut allergy")
+- **Reports:** covers per day per location, no-show rate, busiest slots. CSV export.
+- *(Phase 2)* A table map: tables with capacity, joinable tables, zones (patio, bar, private room), and assigning bookings to tables
+
+### 4C. Technical outline
+- A standalone WordPress plugin on hakkarestaurant.com. Its own database tables keep availability lookups fast at dinner rush.
+- Locations come from the settings in §3C, so there's one source of truth.
+- REST endpoints for availability, create and manage. Front end as an Elementor widget plus a `[hakka_booking]` shortcode.
+- Security: nonces, rate limiting, Cloudflare Turnstile/honeypot, signed manage-links. No admin or usernames exposed (lesson from O-04).
+- Timezone: America/Port_of_Spain (UTC-4, no daylight saving)
+- Emails sent through a proper SMTP or transactional service (not PHP mail) so they don't land in spam
+- GA4 and Meta "booking complete" events (§2C)
+
+### 4D. Questions to decide
+- [ ] Do both locations take reservations from day one?
+- [ ] Is a covers-per-slot limit enough to start with, or do we need table assignment immediately?
+- [ ] Deposits: for which party sizes or events, and how much?
+- [ ] Should WhatsApp/SMS confirmations and reminders go out? Which provider?
+- [ ] Should guests be able to choose a seating area (bar, patio, private room)?
+- [ ] What happens to Amelia afterward: remove it completely, or keep it for anything else?
+
+---
+
+## §5 Information needed from the business
+
+| ☐ | Item |
+|---|---|
+| ☐ | **Port of Spain:** full address, Google Maps place link, geo coordinates, phone/WhatsApp, email, opening hours, holiday hours |
+| ☐ | **Brentwood:** confirm address, phone and hours (including Fri–Sat 11am–12am) |
+| ☐ | Are the menu and prices the same at both locations? If not, the differences. New menu PDFs for each location. |
+| ☐ | Delivery zones, fees and minimums for each location. Pickup lead times. |
+| ☐ | Seating capacity and service periods per location (for bookings) |
+| ☐ | The look and feel for each location: photos/video, any interior or brand differences, preferred accent colours |
+| ☐ | Brand story copy for `/hakka-story/` (or bullet points we can write from) |
+| ☐ | Instagram accounts: one shared account or one per location? Smash Balloon login. |
+| ☐ | Admin access to both sites, the host, Cloudflare, Google (Search Console, GA4, Business Profiles) and Meta Business |
+
+---
+
+## §6 Phased schedule
 
 | Phase | Work | Output |
-|-------|------|--------|
-| **1. Discover** (week 1) | Get the audit back (0.1), backups, a staging copy of both sites, a live-site crawl, a plugin/theme inventory, and the location facts (0.4–0.5). | A complete fix list (Section 2) and staging sites |
-| **2. Foundations** (week 1–2) | Updates, cleanup, speed, SSL/redirects, the `[mealcrafter]` shortcode clash, repo/version setup. | A clean, fast baseline on staging |
-| **3. Two locations** (week 2–3) | `mc_location` theme fields, `[mc_location_tabs]`, `/port-of-spain/` + `/brentwood/` pages, location-aware menu, cross-domain handoff, staff routing. | Working location tabs on both sites |
-| **4. Bookings** (week 3–4) | `mealcrafter-bookings` MVP: availability, form, emails, admin list, alerts. | Bookings live on staging |
-| **5. Content & SEO** (week 4) | Copy and photos for each location, schema, Google Business Profiles, legal pages. | Content complete |
-| **6. QA & launch** (week 5) | Test orders and bookings at both locations, mobile/accessibility pass, staff training, go-live off-peak, monitoring. | Live 🎉 |
+|---|---|---|
+| **0. Prep** (days 1–2) | Backups, staging copies, access (§5), updates (§1E) | Safe sandbox |
+| **1. Quick fixes** (days 2–4) | Everything in §1A–1D. Most of it is small, so push it straight to live after a staging check. | All audit defects closed |
+| **2. Location foundation** (week 2) | Location settings (§3C), header switcher, `/brentwood/` + `/port-of-spain/` pages, footer, `/find-us/` | Both locations visible |
+| **3. Homepage tabs & theming** (week 2–3) | Tab switcher, per-location look and feel, location-aware menu, celebrations and catering pages | The "two-tab" experience |
+| **4. Ordering by location** (week 3) | Location gate, per-location products/zones/hours, kitchen routing, receipts | Orders reach the right kitchen |
+| **5. Booking plugin** (week 3–5) | Build → test on staging → import Amelia bookings → switch over | Reservations live for both locations |
+| **6. SEO & tracking** (week 5) | §2: meta, schema, GTM/GA4/Pixel, Search Console, Business Profiles | Measurable and findable |
+| **7. QA & launch** (week 5–6) | Test orders and bookings at each location, mobile and speed pass, staff training | Live |
 
 ---
 
-## 6. Definition of done
-- [ ] Every audit item is either fixed or deliberately deferred, with a reason
-- [ ] A visitor can switch between Port of Spain and Brentwood. The look, info and menu update, and the choice carries over to ordering and booking.
-- [ ] An order placed for Brentwood reaches only Brentwood staff, with the correct receipt and pickup details
-- [ ] A booking can be made, confirmed, changed and cancelled at either location, and staff are alerted
+## §7 Finished means
+- [ ] Every box in §1 is ticked and checked on the live site
+- [ ] Nothing loads over `http://`, and no admin username is visible anywhere
+- [ ] A visitor can switch Port of Spain ↔ Brentwood and the look, info, menu, order link and booking link all follow
+- [ ] A Port of Spain order only reaches the Port of Spain kitchen, with the correct receipt
+- [ ] A booking can be made, changed and cancelled at both locations, and staff get alerts
+- [ ] Each location has a meta title and description, schema and a Google Business Profile, and GA4/Pixel record purchases and bookings
 - [ ] Mobile Lighthouse score ≥ 85 for performance and ≥ 95 for accessibility on the key pages
-- [ ] Backups and an update routine are in place
