@@ -178,18 +178,57 @@ The audit's wording assumes one location (Brentwood). Updated for two:
 1. **Location**, pre-selected from the tab or cookie, and easy to change
 2. **Party size → date → time.** Only times that still have space are shown, using that location's hours.
 3. **Details:** name, phone (TT format), email, occasion (birthday, anniversary, date night, business), dietary notes, seating preference, high chair
-4. **Confirmation** on screen + branded email (+ WhatsApp/SMS if we turn it on) + an add-to-calendar file
-5. A **manage-booking link** in the email to change or cancel, up to a cutoff (for example, 2 hours before)
-6. Groups above a set size (for example, 10 or more) or celebration packages become a **request** that staff approve, with an optional **deposit** paid through WooCommerce and the existing gateway
+4. **Request received:** a screen message plus an email and a WhatsApp message from that location, saying the booking is *pending* until staff confirm it
+5. **Confirmed:** when staff confirm, the guest gets a confirmation by email and WhatsApp, with an add-to-calendar file. (A per-location setting can switch on auto-confirm for small parties.)
+6. A **manage-booking link** in the messages to change or cancel, up to a cutoff (for example, 2 hours before)
+7. Groups above a set size (for example, 10 or more) always wait for staff approval. **No deposits.**
 
-### 4B. Staff / admin
-- **Settings for each location:** service periods (lunch/dinner), slot interval, table turn time, max covers per slot, max online party size, minimum notice, how far ahead people can book, blackout dates and holiday hours
-- **Today view** for each location: timeline/list, statuses *pending → confirmed → seated → completed / no-show / cancelled*, walk-ins, internal notes
-- **Staff see only their own location.** Managers see both.
-- **Alerts:** a sound/pop-up on the host stand for new bookings, an email to the location's manager, and a reminder to the guest 24 hours before
-- **Guest history:** visit count, no-show count, notes ("prefers booth", "nut allergy")
+---
+
+### 4B. Staff booking screen (front end, password protected)
+
+A page on the website, e.g. `hakkarestaurant.com/staff/bookings/`, so the host stand can use it on a phone or tablet without going into wp-admin.
+
+- **Password protected.** One password per location (stored hashed, with login rate-limiting and auto-logout). Port of Spain staff only see Port of Spain; Brentwood staff only see Brentwood; a manager password sees both. We can add individual staff logins later if you want to know who confirmed what.
+- **Today view** (default) with a date picker, a location label and a live-refreshing list. A badge shows how many bookings are waiting for confirmation.
+- **Each booking shows:** time, name, party size, phone (tap to call or WhatsApp), occasion, seating preference, allergy notes, special requests and status.
+- **Actions on each booking:**
+  - **Confirm** (sends the confirmation email + WhatsApp to the guest)
+  - **Decline / suggest another time** (with a message to the guest)
+  - **Seated**, **Completed**, **No-show**, **Cancel**
+  - **Edit** (time or party size) and add an **internal note**
+- **Add a booking** for walk-ins and phone calls
+- **Alerts:** a sound and pop-up on the screen when a new booking comes in (we can reuse the alert idea from your order notifications)
+- **Search and filter** by name, phone, date or status
+
+### 4B-2. Admin settings and reports (wp-admin, managers only)
+- Settings for each location (§4E below)
 - **Reports:** covers per day per location, no-show rate, busiest slots. CSV export.
-- *(Phase 2)* A table map: tables with capacity, joinable tables, zones (patio, bar, private room), and assigning bookings to tables
+- Guest history: visit count, no-show count, notes
+- *(Phase 2)* A table map: tables with capacity, joinable tables, zones, and assigning bookings to tables
+
+### 4B-3. Email routing by location
+
+Each location has its **own email identity**, so everything goes out from, and to, the right branch.
+
+| Setting | Port of Spain | Brentwood |
+|---|---|---|
+| **From name** | HAKKA Port of Spain | HAKKA Brentwood |
+| **From address** (sends to the guest) | e.g. `portofspain@hakkarestaurant.com` | e.g. `brentwood@hakkarestaurant.com` |
+| **Reply-to** | The same address, so replies land in that branch's inbox | The same |
+| **Staff notification address(es)** (where new-booking alerts go) | One or more inboxes for that branch | One or more inboxes for that branch |
+| **Email signature, address, phone, map link, hours** | Port of Spain details | Brentwood details |
+| **WhatsApp sender number** | Port of Spain's number | Brentwood's number |
+
+- When a guest picks **HAKKA Port of Spain**, the guest emails, staff alerts and WhatsApp messages all use the Port of Spain identity. Nothing from one branch is ever sent from or to the other.
+- Both sender addresses go through a proper SMTP / transactional email service with SPF, DKIM and DMARC set up, so confirmations don't land in spam.
+- Email templates are shared but fill in the location's own details. Templates: *request received, confirmed, declined / new time suggested, reminder, cancelled, staff new-booking alert.*
+
+### 4B-4. WhatsApp
+- Uses the **WhatsApp Business Cloud API** (Meta). It needs a Meta Business account, a verified number for each location (or one shared number to start) and **approved message templates**. Messages we send to start a conversation must use those templates.
+- Messages: request received, confirmed, declined / new time, 24-hour reminder, cancelled.
+- The guest ticks an opt-in box on the form. If WhatsApp fails or they opt out, the email still goes.
+- Staff screen also has a one-tap "WhatsApp this guest" link.
 
 ### 4C. Technical outline
 - A standalone WordPress plugin on hakkarestaurant.com. Its own database tables keep availability lookups fast at dinner rush.
@@ -197,16 +236,24 @@ The audit's wording assumes one location (Brentwood). Updated for two:
 - REST endpoints for availability, create and manage. Front end as an Elementor widget plus a `[hakka_booking]` shortcode.
 - Security: nonces, rate limiting, Cloudflare Turnstile/honeypot, signed manage-links. No admin or usernames exposed (lesson from O-04).
 - Timezone: America/Port_of_Spain (UTC-4, no daylight saving)
-- Emails sent through a proper SMTP or transactional service (not PHP mail) so they don't land in spam
+- Emails sent through a proper SMTP or transactional service (not PHP mail), with the From address chosen per location (§4B-3)
 - GA4 and Meta "booking complete" events (§2C)
 
-### 4D. Questions to decide
-- [ ] Do both locations take reservations from day one?
-- [ ] Is a covers-per-slot limit enough to start with, or do we need table assignment immediately?
-- [ ] Deposits: for which party sizes or events, and how much?
-- [ ] Should WhatsApp/SMS confirmations and reminders go out? Which provider?
-- [ ] Should guests be able to choose a seating area (bar, patio, private room)?
-- [ ] What happens to Amelia afterward: remove it completely, or keep it for anything else?
+### 4D. Decided / still open
+
+**Decided:** no deposits · WhatsApp confirmations · password-protected staff screen where staff confirm bookings · a separate email identity for each location.
+
+**Still open:**
+- [ ] The actual email addresses for each branch (sender and staff alert inboxes)
+- [ ] WhatsApp: one number per location or one shared number to start? Do you already have a WhatsApp Business account?
+- [ ] Staff login: one password per location (the default I've planned), or individual staff accounts?
+- [ ] Should small parties auto-confirm, or should staff always confirm?
+- [ ] Both locations take reservations from day one?
+- [ ] Covers-per-slot limit to start, or table assignment immediately?
+- [ ] What happens to Amelia afterward?
+
+### 4E. Settings for each location (final field list)
+Bookings on/off · name, address, phone · opening hours per weekday · service periods · holiday hours and blackout dates · slot interval · table turn time · max covers per slot · min/max online party size · party size that needs approval · auto-confirm rule · minimum notice · how far ahead guests can book · change/cancel cutoff · **From name, From address, reply-to, staff alert addresses** · **WhatsApp number and templates** · reminder timing · staff password · message templates
 
 ---
 
