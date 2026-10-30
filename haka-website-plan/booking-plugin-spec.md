@@ -67,6 +67,9 @@ A list of locations, with **Add / Edit / Deactivate**. Each location has these f
 | Phone | text | |
 | Google Maps link | url | |
 | Display order | number | |
+| **Booking form header image** | image upload (media library) | The big header image at the top of the booking form. It changes to this image when the guest selects this location. Recommended size 1600 x 600 px, JPG/WebP, under 300 KB. The owner will upload these in the backend after the build. |
+| Image alt text | text | For accessibility |
+| Email header image (optional) | image upload | Used at the top of this location's emails. Falls back to the form header image, then to the HAKKA logo. |
 
 **Email routing (the point of this plugin)**
 | Field | Type | Notes |
@@ -137,12 +140,18 @@ Each location has its own list of booking types. The admin can add, rename, reor
 **Staff access**
 | Field | Notes |
 |---|---|
-| Staff screen password | One password for *this* location's staff screen (stored hashed) |
+| Staff users | Which staff user accounts can see this location's bookings (see §3.1b). Assigned on the user's profile or here. |
 | Reminder timing | Hours before the booking (default 24) |
 
 ### 3.1b Who can change settings
 - Administrators can change everything.
 - The plugin adds a **Reservations Manager** role (and a `hkr_manage` capability). A person with it can edit locations, hours, the last-booking cutoff, slot capacity, booking types and special dates, and see bookings, without being a full WordPress administrator. Use it for managers such as Marcus.
+- **Booking staff accounts (decided 30 Oct 2026):** each staff member gets their **own user account** with a custom role, **HAKKA Booking Staff**. The role can only see and manage bookings. It cannot touch pages, plugins, users, settings or anything else, and its members are sent to the staff booking screen after login (not the WordPress dashboard).
+  - Each staff user is assigned **one or more locations** (a field on their profile). They only see bookings for those locations.
+  - Why individual accounts: the booking log shows who confirmed or changed each booking, a person's access can be switched off without changing a shared password, and there's no shared password to leak.
+  - Login uses the normal WordPress login with protections: no username shown anywhere on the public site (author archives off), limit login attempts, optional two-step login, and an idle session timeout.
+  - The plugin has an **Add booking staff** screen: name, email, locations, and it sends them a set-your-password email.
+  - The food-ordering site (order.hakkarestaurant.com) is a separate WordPress site, so its staff accounts are separate. If one login for both is wanted, that's a separate piece of work (see §10).
 - Every settings change is recorded (who, what, when) in the booking log.
 
 ### 3.2 Settings (global)
@@ -224,6 +233,7 @@ Index `location_id, area_id, start_datetime` and `status`.
 ## 5. Front end
 
 ### 5.1 Booking form
+- **Location header image (decided 30 Oct 2026):** the top of the form shows the selected location's header image. When the guest switches location, the image **cross-fades** to that location's image, and the location name, address and phone under it update too. Images are uploaded per location in the backend (§3.1). If a location has no image, show a default HAKKA image. The image carries alt text, is lazy-loaded and sized for mobile.
 - Shortcode `[hakka_booking location="auto"]` plus an Elementor-friendly wrapper (a plain shortcode widget is enough)
 - Steps: **Location → Booking type → Party size → Date → Time slot → Details → Confirm**
 - Location is read from `?loc=` or the visitor's saved choice (cookie `hkr_loc`), and can be changed
@@ -244,7 +254,7 @@ Index `location_id, area_id, start_datetime` and `status`.
 
 ### 5.3 Staff screen
 - Page created on activation: `/staff/bookings/` (shortcode `[hakka_staff_bookings]`), `noindex`, excluded from caching and sitemaps
-- **Login:** pick location + enter that location's password. Manager password sees all locations. Hashed, rate-limited, lockout after repeated failures, session expires after the configured time. Uses its own cookie/session, not WordPress users.
+- **Login:** staff log in with their own WordPress user account (role *HAKKA Booking Staff*, §3.1b) and land on this screen. They see only the locations assigned to them. Managers and administrators see all locations. Login attempts are limited and idle sessions expire.
 - **Today view** (default) with date navigation and a live-refresh (polling) list. Pending count badge.
 - Each booking shows time, name, party size, phone (tap to call), occasion, seating, allergy notes, special requests, status
 - Actions: **Confirm · Decline / suggest another time (with message) · Seated · Completed · No-show · Cancel · Edit · Add internal note**
@@ -308,12 +318,13 @@ No booking is ever confirmed automatically. WhatsApp messages are added in phase
 
 ---
 
-## 7. Migration from MotoPress
-1. Build and test the new plugin with MotoPress still live
-2. Export MotoPress's future bookings (REST route `/motopress/appointment/v1/bookings/reservations` or the `mpa_*` data) and import into `hkr_bookings` as the Brentwood location, **confirming with the owner** which existing bookings are real
-3. Replace the `appointment-form` widget on `/reservations/` (page 379) with `[hakka_booking]`
-4. Leave MotoPress deactivated, not deleted, for a few weeks. Then remove it, and its Twilio, Square, Google Analytics and Checkout Fields add-ons.
-5. Update the "Make Reservation" buttons across the site (they already point to `/reservations/`)
+## 7. Migration from MotoPress (build beside it, then switch)
+1. **Build and test on a new, hidden page** (e.g. `/reservations-test/`, `noindex`, not in the menu or sitemap). The live `/reservations/` page keeps MotoPress running during this time. Customers see no change.
+2. Test every flow on the test page: bookings at both locations, the celebration question, capacity limits, last-booking cutoff, guest and staff emails, staff screen and logins.
+3. When it works, export MotoPress's future bookings (REST route `/motopress/appointment/v1/bookings/reservations` or the `mpa_*` data) and import them as Brentwood bookings, **confirming with the owner** which are real.
+4. **Go live:** replace the `appointment-form` widget on `/reservations/` (page 379) with `[hakka_booking]`.
+5. Keep MotoPress deactivated, not deleted, for a few weeks. Then remove it and its Twilio, Square, Google Analytics and Checkout Fields add-ons (owner has approved removal once the new plugin works).
+6. The "Make Reservation" buttons across the site already point to `/reservations/`, so nothing else changes.
 
 ---
 
@@ -329,7 +340,7 @@ No booking is ever confirmed automatically. WhatsApp messages are added in phase
 | Google Maps | https://maps.app.goo.gl/hPLKozLHLcosXHbn9 |
 | **Hours** | **Monday to Friday: 10:00am - 9:00pm · Saturday: 11:00am - 9:00pm · Sunday: Closed** |
 | Slot length | 1 hour (default) |
-| Street address | *(still needed. The email suggests Queen Street.)* |
+| Street address | **101 Queen Street, Port of Spain** |
 
 **Booking types for Port of Spain** (owner confirmed: use the higher number as the capacity)
 | Booking type | Capacity per slot | Notes |
@@ -363,7 +374,7 @@ The capacity is the number that online bookings stop at. The separate "hard maxi
 | **Capacity** | **30 people per time slot**, for the whole location (shared across the three types) | Owner, 30 Oct 2026 |
 | Separate seating areas | None given. Add later in the backend if needed. | |
 
-**Discrepancy to settle:** the website says Brentwood is open 11am-11pm (to midnight on Fri-Sat), but the booking system only accepts bookings from 10am to 9pm every day. The new plugin needs one set of hours per day. Is the booking window meant to be shorter than opening hours (e.g. last bookings at 9pm), or are the booking hours out of date?
+**Decision (30 Oct 2026): use the website hours (11am to 11pm; Fri-Sat to midnight as shown on the site), not the 10am-9pm MotoPress schedule.** Bookings still stop 1 hour before closing. *(Previously noted discrepancy:)* the website says Brentwood is open 11am-11pm (to midnight on Fri-Sat), but the booking system only accepts bookings from 10am to 9pm every day. The new plugin needs one set of hours per day. Is the booking window meant to be shorter than opening hours (e.g. last bookings at 9pm), or are the booking hours out of date?
 
 Note: the Port of Spain hours supplied by the owner (Mon-Fri 10am-9pm) look similar to the MotoPress schedule. Worth checking that the MotoPress schedule wasn't set up with those hours in mind.
 
@@ -380,14 +391,14 @@ Note: the Port of Spain hours supplied by the owner (Mon-Fri 10am-9pm) look simi
 
 ## 10. Open items for the owner
 1. ~~Email addresses~~ Decided: guest emails come from `booking@hakkarestaurant.com` for both locations. Staff alerts go to `queenstreet@hakkarestaurant.com` (Port of Spain) and `booking@hakkarestaurant.com` (Brentwood). Both mailboxes must exist and be set up in Post SMTP (SPF/DKIM) so email delivers.
-2. Port of Spain: the street address (phone and map link are supplied)
+2. ~~Port of Spain address~~ 101 Queen Street, Port of Spain.
 2a. ~~Brentwood booking types and capacity~~ Decided: Dining, Event, Corporate Event, 30 people per slot (whole location).
-2d. Brentwood's booking hours: use the website hours, or the 10am-9pm in MotoPress? (see §8)
+2d. ~~Brentwood hours~~ Decided: website hours (11am-11pm), bookings stop 1 hour before closing.
 2b. ~~Capacity numbers~~ Decided: Port of Spain uses the higher numbers (Deanna 30, Bar 12, Dining area 48).
-2c. Should some booking types always need staff confirmation (e.g. the Deanna private room)? Does the private room have a minimum party size?
+2c. ~~Private room rules~~ Decided: use the owner's colleague's setup (Deanna capacity 30). No other rules given, so no minimum party size and normal confirmation (every booking is confirmed by staff).
 3. ~~WhatsApp~~ Deferred. The owner will ask the CEO (see §3.4 for the questions).
 4. Confirm the **default slot length** at each location (1 hour assumed), and the covers limit per slot
 5. ~~Confirmation~~ Decided: every booking is confirmed by staff, and the emails say we will call to confirm.
-6. Staff login: one password per location (the default in this spec), or individual accounts?
+6. ~~Staff login~~ Decided: individual user accounts with a custom booking-staff role (§3.1b). Open: does the owner want one login to also work on order.hakkarestaurant.com? (Separate site, so it would need extra work.)
 7. Large parties: from what size, and a request-only flow?
-8. Is it OK to deactivate MotoPress once the new plugin is live, and are there existing bookings to import?
+8. ~~MotoPress~~ Decided: build first on a test page, then remove MotoPress once the new plugin works (§7). Still to confirm: which existing MotoPress bookings should be imported.
