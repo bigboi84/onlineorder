@@ -190,7 +190,7 @@ class HKR_Install {
 		HKR_Locations::save_areas(
 			$pos_id,
 			array(
-				array( 'name' => 'Deanna (Private)', 'description' => 'Private dining room', 'capacity' => 30, 'max_party' => 30, 'sort_order' => 1 ),
+				array( 'name' => 'Private Room', 'description' => 'Private dining room', 'capacity' => 30, 'max_party' => 30, 'sort_order' => 1 ),
 				array( 'name' => 'Bar', 'description' => '', 'capacity' => 12, 'max_party' => 12, 'sort_order' => 2 ),
 				array( 'name' => 'Dining area', 'description' => '', 'capacity' => 48, 'sort_order' => 3 ),
 			)

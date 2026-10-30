@@ -26,7 +26,7 @@ Built to replace MotoPress Appointment Booking. Full spec: `../haka-website-plan
 |---|---|---|
 | Hours | Mon–Fri 10am–9pm · Sat 11am–9pm · Sun closed | Mon–Thu 11am–11pm · Fri–Sat 11am–midnight · Sun 11am–11pm |
 | Last booking | 1 hour before closing | 1 hour before closing |
-| Booking types | Deanna (Private) 30 · Bar 12 · Dining area 48 | Dining · Event · Corporate Event |
+| Booking types | Private Room 30 · Bar 12 · Dining area 48 | Dining · Event · Corporate Event |
 | Guests per slot (whole location) | – (each type has its own limit) | 30 |
 | Staff alerts to | queenstreet@hakkarestaurant.com | booking@hakkarestaurant.com |
 
@@ -34,7 +34,7 @@ Other defaults (all editable):
 - 1-hour slots
 - 2 hours' minimum notice
 - Bookings open 60 days ahead
-- Largest online party 20 (the Deanna room takes up to 30)
+- Largest online party 20 (the Private Room takes up to 30)
 - Reminder 24 hours before
 
 ## Install

@@ -110,11 +110,11 @@ The global default sender (`booking@hakkarestaurant.com`) lives in *Settings →
 
 **Booking types and capacity**
 
-Each location has its own list of booking types. The admin can add, rename, reorder, activate and deactivate them. A booking type can be a *purpose* (Brentwood: **Dining, Event, Corporate Event**, the options on the current form) or a *seating area* (Port of Spain: **Deanna (Private), Bar, Dining area**). The plugin treats both the same way.
+Each location has its own list of booking types. The admin can add, rename, reorder, activate and deactivate them. A booking type can be a *purpose* (Brentwood: **Dining, Event, Corporate Event**, the options on the current form) or a *seating area* (Port of Spain: **Private Room, Bar, Dining area**). The plugin treats both the same way.
 
 | Field | Type | Notes |
 |---|---|---|
-| Name | text | e.g. "Deanna (Private)", "Bar", "Dining area" |
+| Name | text | e.g. "Private Room", "Bar", "Dining area" |
 | Description | text | Shown to the guest on the form |
 | **Capacity per time slot** | number, optional | How many people this type holds in one slot. Leave blank if the type has no limit of its own and only the location-wide limit applies (as at Brentwood). |
 | **Ask about a celebration** | toggle | When on, the form shows the celebration question (see §5.1) once the guest picks this type. On by default for Dining, Event and Corporate Event. |
@@ -276,7 +276,7 @@ Two emails go out for every new booking: one to the guest and one to the locatio
   - **Location** name and full address, with a *Get directions* button
   - **Date** (e.g. Friday, 6 November 2026) and **time** (start to end)
   - **Party size** (e.g. 4 guests)
-  - **Booking type** (e.g. Dining area, Bar, Deanna Private)
+  - **Booking type** (e.g. Dining area, Bar, Private Room)
   - Guest name, phone, email
   - **Celebration** (e.g. Birthday, Anniversary, or the text the guest typed), seating preference, high chair
   - Dietary / allergy notes and special requests
@@ -345,7 +345,7 @@ No booking is ever confirmed automatically. WhatsApp messages are added in phase
 **Booking types for Port of Spain** (owner confirmed: use the higher number as the capacity)
 | Booking type | Capacity per slot | Notes |
 |---|---|---|
-| Deanna (Private) | **30** | |
+| Private Room | **30** | |
 | Bar | **12** | |
 | Dining area | **48** | |
 
@@ -394,8 +394,8 @@ Note: the Port of Spain hours supplied by the owner (Mon-Fri 10am-9pm) look simi
 2. ~~Port of Spain address~~ 101 Queen Street, Port of Spain.
 2a. ~~Brentwood booking types and capacity~~ Decided: Dining, Event, Corporate Event, 30 people per slot (whole location).
 2d. ~~Brentwood hours~~ Decided: website hours (11am-11pm), bookings stop 1 hour before closing.
-2b. ~~Capacity numbers~~ Decided: Port of Spain uses the higher numbers (Deanna 30, Bar 12, Dining area 48).
-2c. ~~Private room rules~~ Decided: use the owner's colleague's setup (Deanna capacity 30). No other rules given, so no minimum party size and normal confirmation (every booking is confirmed by staff).
+2b. ~~Capacity numbers~~ Decided: Port of Spain uses the higher numbers (Private Room 30, Bar 12, Dining area 48).
+2c. ~~Private room rules~~ Decided: use the setup Deanna sent (Private Room capacity 30). No other rules given, so no minimum party size and normal confirmation (every booking is confirmed by staff).
 3. ~~WhatsApp~~ Deferred. The owner will ask the CEO (see §3.4 for the questions).
 4. Confirm the **default slot length** at each location (1 hour assumed), and the covers limit per slot
 5. ~~Confirmation~~ Decided: every booking is confirmed by staff, and the emails say we will call to confirm.
