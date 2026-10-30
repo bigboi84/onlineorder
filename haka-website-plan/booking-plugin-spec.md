@@ -31,6 +31,8 @@
 6. **WhatsApp** confirmations. The WhatsApp Business account already exists.
 7. A **password-protected front-end screen** where staff see bookings and **confirm** them.
 8. **Email by location:** the email sent to the guest and the alert sent to staff both use the chosen location's email identity.
+9. **Booking types (seating areas) with their own capacity.** A booking is for a type, e.g. *Private room*, *Bar*, *Dining area*. Each type has a number for how many people it holds per time slot. See §3.1 "Booking types" and the Port of Spain example in §8.
+10. **Beautiful, clear booking emails.** When someone books, the **guest** gets an email and the **location's email** gets one. Both lay out all the details clearly (party size, date, time, booking type, notes). See §6.
 
 ---
 
@@ -100,6 +102,26 @@ A list of locations, with **Add / Edit / Deactivate**. Each location has these f
 | Change/cancel cutoff (hours before) | 2 | |
 | **Per-day overrides** | | Each day can optionally override slot length, covers per slot and max party size |
 
+**Booking types (seating areas) and capacity**
+
+Each location has its own list of booking types. The admin can add, rename, reorder, activate and deactivate them.
+
+| Field | Type | Notes |
+|---|---|---|
+| Name | text | e.g. "Deanna (Private)", "Bar", "Dining area" |
+| Description | text | Shown to the guest on the form |
+| **Capacity per time slot** | number | How many people this type holds in one slot. Bookings of this type are checked against this number. |
+| Hard maximum | number, optional | The most it can take if staff squeeze guests in (staff can book up to this, online bookings stop at the capacity) |
+| Min party size | number | e.g. a private room can require a minimum |
+| Max party size (online) | number | |
+| Available days / hours | optional | Restrict a type to certain days or times, otherwise it follows the location's hours |
+| Requires manual confirmation | toggle | e.g. always for the private room |
+| Active | toggle | |
+
+- The guest picks the booking type on the form. A type that is full for that slot is shown as unavailable.
+- Capacity is counted **per type, per slot**. A full Bar doesn't block the Dining area.
+- If a location only has one area, the booking type step is hidden.
+
 **Confirmation**
 | Field | Default |
 |---|---|
@@ -154,13 +176,14 @@ A list of locations, with **Add / Edit / Deactivate**. Each location has these f
 Custom tables (created on activation, versioned for upgrades). Do not use post meta for bookings.
 
 - `{prefix}hkr_locations`: id, name, slug, active, accepts_bookings, address, phone, map_url, sort_order, `settings` (JSON for slot/capacity/confirmation options), `hours` (JSON, per weekday), `special_dates` (JSON), notification_emails, from_name, from_email, reply_to, bcc, whatsapp_phone_id, staff_password_hash, timestamps
-- `{prefix}hkr_bookings`: id, ref (unique, e.g. `HK-1042`), location_id, start_datetime, end_datetime, party_size, status (`pending|confirmed|seated|completed|no_show|cancelled|declined`), source (`web|phone|walkin|staff`), guest_name, guest_phone, guest_email, occasion, seating_pref, high_chair, guest_notes, internal_notes, whatsapp_optin, manage_token_hash, reminder_sent_at, created_at, updated_at, created_by
+- `{prefix}hkr_areas` (booking types): id, location_id, name, description, capacity, hard_max, min_party, max_party, available_days/hours (JSON, optional), requires_manual_confirm, active, sort_order
+- `{prefix}hkr_bookings`: id, ref (unique, e.g. `HK-1042`), location_id, **area_id**, start_datetime, end_datetime, party_size, status (`pending|confirmed|seated|completed|no_show|cancelled|declined`), source (`web|phone|walkin|staff`), guest_name, guest_phone, guest_email, occasion, seating_pref, high_chair, guest_notes, internal_notes, whatsapp_optin, manage_token_hash, reminder_sent_at, created_at, updated_at, created_by
 - `{prefix}hkr_booking_log`: id, booking_id, action, old_value, new_value, actor, created_at
 - `{prefix}hkr_message_log`: id, booking_id, channel (`email|whatsapp`), template, to, status, error, created_at
 
-Index `location_id, start_datetime` and `status`.
+Index `location_id, area_id, start_datetime` and `status`.
 
-**Availability rule:** a slot is offered if the location is open, the date isn't blocked, the slot is within the notice/advance limits, and `SUM(party_size)` of non-cancelled bookings overlapping the slot, plus the new party, is within the covers limit. Check again in a transaction at booking time to avoid double-booking.
+**Availability rule:** a slot is offered for a booking type if the location is open, the date isn't blocked, the slot is within the notice/advance limits, and `SUM(party_size)` of non-cancelled bookings **of that type** overlapping the slot, plus the new party, is within that type's capacity. The location-wide "max covers per slot" (§3.1) is an optional overall ceiling on top of this. Check again in a transaction at booking time to avoid double-booking.
 
 **Hours rule:** a day's close time of midnight means 24:00 of that same day. Friday 11:00–24:00 is valid and the last slot is computed from it.
 
@@ -170,9 +193,9 @@ Index `location_id, start_datetime` and `status`.
 
 ### 5.1 Booking form
 - Shortcode `[hakka_booking location="auto"]` plus an Elementor-friendly wrapper (a plain shortcode widget is enough)
-- Steps: **Location → Party size → Date → Time slot → Details → Confirm**
+- Steps: **Location → Booking type → Party size → Date → Time slot → Details → Confirm**
 - Location is read from `?loc=` or the visitor's saved choice (cookie `hkr_loc`), and can be changed
-- Date picker greys out closed days and blocked dates. Time slots are the buttons for the chosen location and date, showing only slots with room.
+- Date picker greys out closed days and blocked dates. Time slots are the buttons for the chosen location, booking type and date, showing only slots with room (remaining space can optionally be shown, e.g. "6 spots left").
 - Fields: full name, phone, email, WhatsApp opt-in, occasion, seating preference, high chair, dietary/allergy notes, special requests, terms checkbox
 - Over the max party size: show "Please call {phone}" or send a request for approval
 - Accessible, mobile-first, styled to match the site (black/red theme, Poppins), CSS variables for colours
@@ -193,7 +216,47 @@ Index `location_id, start_datetime` and `status`.
 
 ---
 
-## 6. Notifications flow
+## 6. Booking emails (guest and location)
+
+Two emails go out for every new booking. Both are built to be **beautiful and easy to scan**: branded, mobile-friendly, with the key facts in a clear summary block at the top.
+
+### 6.1 To the guest: "We've received your booking" / "Your booking is confirmed"
+- **From:** the location's From name and email (e.g. HAKKA Port of Spain <queenstreet@hakkarestaurant.com>). **Reply-to:** the location's email.
+- **Design:** HAKKA logo and black/red brand header, a clear status banner (*Request received* or *Confirmed*), then a summary card, then location details, then buttons.
+- **Summary card (everything laid out clearly):**
+  - Booking reference
+  - **Location** name and full address, with a *Get directions* button
+  - **Date** (e.g. Friday, 6 November 2026) and **time** (start to end)
+  - **Party size** (e.g. 4 guests)
+  - **Booking type** (e.g. Dining area, Bar, Deanna Private)
+  - Guest name, phone, email
+  - Occasion, seating preference, high chair
+  - Dietary / allergy notes and special requests
+  - Status (*Pending confirmation* or *Confirmed*)
+- **Buttons:** *Add to calendar* (.ics attached too), *Manage / cancel booking*, *Call the restaurant*, *Message us on WhatsApp*
+- **Footer:** location address, phone, opening hours, the cancellation policy and a short note on what happens next ("We'll confirm shortly")
+
+### 6.2 To the location: "New booking"
+- **To:** the location's notification email(s) (e.g. queenstreet@hakkarestaurant.com for Port of Spain). **BCC:** optional.
+- **Subject** shows the key facts at a glance, e.g. `New booking: Sat 7 Nov, 6:00pm · 4 guests · Dining area · Jane Smith (HK-1042)`
+- Same clean summary card as the guest's, plus:
+  - Guest phone as a tap-to-call link and a WhatsApp link
+  - Internal flags: *large party*, *allergy note*, *special occasion*
+  - A **Confirm booking** button (opens the staff screen) and a link to the staff screen
+  - How full that booking type is for that slot (e.g. `Dining area: 12 of 44 booked`)
+
+### 6.3 Other emails
+Confirmed · Declined / new time suggested · Reminder · Cancelled · Changed. All share the same layout, and the staff versions go to the location email.
+
+### 6.4 Build notes
+- Table-based HTML with inline CSS (works in Gmail, Outlook and Apple Mail), 600px wide, readable on a phone, with a plain-text version as the fallback
+- Colours and logo come from plugin settings
+- Editable in *Messages & Email*, with a live preview and a "send test" button
+- Sent with `wp_mail()` through Post SMTP, with From / Reply-To / BCC set from the booking's location
+
+---
+
+## 6b. Notifications flow
 
 | Event | Guest | Staff (location email) |
 |---|---|---|
@@ -217,12 +280,35 @@ Auto-confirm (if enabled for the location) sends "confirmed" immediately.
 ---
 
 ## 8. Locations to create on first run
-| Name | Slug | Hours (defaults, editable) | Email | WhatsApp |
-|---|---|---|---|---|
-| HAKKA Brentwood | `brentwood` | Mon–Thu 11am–11pm · Fri–Sat 11am–12am · Sun 11am–11pm | *(owner to provide)* | *(owner to provide)* |
-| HAKKA Port of Spain | `port-of-spain` | *(owner to provide)* | *(owner to provide)* | *(owner to provide)* |
 
-The Brentwood address is 200 South Brentwood Avenue, Chaguanas. The phone is +1 868 334 2552. The Port of Spain details are still needed.
+### HAKKA Port of Spain (details supplied by the owner)
+| Field | Value |
+|---|---|
+| Slug | `port-of-spain` |
+| Notification / sender email | `queenstreet@hakkarestaurant.com` (the "Queen Street" location) |
+| Contact phone | 254-7426 (assumed +1 868 254-7426, **to confirm**) |
+| **Hours** | **Monday to Friday: 10:00am - 9:00pm · Saturday: 11:00am - 9:00pm · Sunday: Closed** |
+| Slot length | 1 hour (default) |
+| Address, map link | *(still needed)* |
+
+**Booking types for Port of Spain**
+| Booking type | Capacity per slot | Notes |
+|---|---|---|
+| Deanna (Private) | 28 to 30 | See the question below on the two numbers |
+| Bar | 12 | |
+| Dining area | 44 to 48 | See the question below on the two numbers |
+
+*How I've read "28 to 30" and "44 to 48":* the lower number is the normal **capacity** that online bookings stop at, and the higher number is the **hard maximum** that staff can go up to. Please confirm this reading.
+
+### HAKKA Brentwood
+| Field | Value |
+|---|---|
+| Slug | `brentwood` |
+| Hours (current, as shown on the site) | Mon-Thu 11am-11pm · Fri-Sat 11am-12am · Sun 11am-11pm |
+| Address | 200 South Brentwood Avenue, Chaguanas |
+| Phone | +1 868 334 2552 |
+| Notification / sender email | *(owner to provide)* |
+| **Booking types and capacities** | *(owner to provide)* |
 
 ---
 
@@ -237,8 +323,11 @@ The Brentwood address is 200 South Brentwood Avenue, Chaguanas. The phone is +1 
 ---
 
 ## 10. Open items for the owner
-1. Email addresses for each location (From address and staff alert inboxes)
-2. Port of Spain: address, phone, hours (each day), map link
+1. Brentwood's email address (Port of Spain's is `queenstreet@hakkarestaurant.com`). Is it both the sender address and the staff alert inbox, or should alerts go to a different one?
+2. Port of Spain: the street address and map link. Is 254-7426 +1 868 254-7426?
+2a. The booking types for Brentwood and their capacity per slot
+2b. Confirm how to read the capacity numbers: "28 to 30" and "44 to 48" as **normal capacity / hard maximum**?
+2c. Should some booking types always need staff confirmation (e.g. the Deanna private room)? Does the private room have a minimum party size?
 3. WhatsApp: one number or one per location? Which number(s) are on the Business account, and are they connected to the Meta Cloud API? The message templates need Meta approval.
 4. Confirm the **default slot length** at each location (1 hour assumed), and the covers limit per slot
 5. Should small parties auto-confirm, or should staff always confirm? (MotoPress is manual today.)
