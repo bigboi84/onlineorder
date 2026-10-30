@@ -19,9 +19,10 @@ Built to replace MotoPress Appointment Booking. Full spec: `../haka-website-plan
   - Each staff member logs in with their own account and sees only their location(s). Admins and Reservations Managers see every location, with a location filter.
   - Locations are assigned under Users → Add New / Edit user → **Booking locations**. The Users list has a "Booking locations" column.
   - Staff can confirm, decline (with a message), seat, mark no-shows, edit, add notes, and add phone or walk-in bookings.
+  - **Block times:** staff can close a whole day, or particular time slots, to online bookings (e.g. Mother's Day). It can apply to one booking type or all, for one day or a range of days, with a reason. Guests see blocked times as full. Staff can still add phone and walk-in bookings into them. A "Closed to online bookings" panel lists every block, with a button to reopen it.
   - A sound and pop-up alert shows when a new booking arrives.
 - **Backend (wp-admin → Reservations)**:
-  - **Locations**: email routing, opening hours per day (split shifts, midnight close), holidays and special dates, slot length, the "last booking before closing" cutoff, guests per slot, booking types with their own capacity, and header images.
+  - **Locations**: header photo with drag-to-position previews for desktop and phone (plus zoom and an optional phone-only photo), a photo for each booking type (shown on its card and in the header when chosen), email routing, opening hours per day (split shifts, midnight close), holidays and special dates, slot length, the "last booking before closing" cutoff, guests per slot, booking types with their own capacity, and header images.
   - **Settings**: sender, logo, colours, form fields, celebration choices, spam protection, data retention.
   - **Messages & Email**: wording for every email, with preview and test send.
   - **Booking staff**: add or remove staff logins.

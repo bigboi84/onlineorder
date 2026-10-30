@@ -131,7 +131,14 @@ class HKR_Admin_Locations {
 						<tr><th><label for="hkr-l-map"><?php esc_html_e( 'Google Maps link', 'hakka-reservations' ); ?></label></th><td><input type="url" id="hkr-l-map" name="loc[map_url]" class="large-text" value="<?php echo esc_attr( $loc['map_url'] ); ?>"></td></tr>
 						<tr><th><label for="hkr-l-order"><?php esc_html_e( 'Display order', 'hakka-reservations' ); ?></label></th><td><input type="number" id="hkr-l-order" name="loc[sort_order]" class="small-text" value="<?php echo esc_attr( $loc['sort_order'] ); ?>"></td></tr>
 						<tr><th><?php esc_html_e( 'Booking form header image', 'hakka-reservations' ); ?></th><td>
-							<?php HKR_Admin::image_field( 'loc[header_image_id]', $loc['header_image_id'], __( 'Shown at the top of the booking form when a guest picks this location. Recommended 1600 × 600 px, JPG or WebP, under 300 KB.', 'hakka-reservations' ) ); ?>
+							<?php HKR_Admin::image_field( 'loc[header_image_id]', $loc['header_image_id'], __( 'Shown at the top of the booking form when a guest picks this location. Recommended 1600 × 600 px, JPG or WebP, under 300 KB.', 'hakka-reservations' ), 'hkr-hero-img' ); ?>
+						</td></tr>
+						<tr><th><?php esc_html_e( 'Different photo for phones (optional)', 'hakka-reservations' ); ?></th><td>
+							<?php HKR_Admin::image_field( 'hero_mobile_id', $s['hero_mobile_id'], __( 'Only if the main photo does not crop well on a phone. A taller photo works best, about 1200 × 800 px.', 'hakka-reservations' ), 'hkr-hero-img-m' ); ?>
+						</td></tr>
+						<tr><th><?php esc_html_e( 'Position the photo', 'hakka-reservations' ); ?></th><td>
+							<?php HKR_Admin::frame_editor( 'hero_frame', $s['hero_frame'], 'hkr-hero-img', 'hkr-hero-img-m', array( $loc['name'], $loc['address'] ) ); ?>
+							<p class="description"><?php esc_html_e( 'Drag each preview until the best part of the photo shows, and zoom in if needed. This is exactly how the top of the booking form looks on a computer and on a phone. Click "Save location" to keep it.', 'hakka-reservations' ); ?></p>
 						</td></tr>
 						<tr><th><label for="hkr-l-alt"><?php esc_html_e( 'Image description (alt text)', 'hakka-reservations' ); ?></label></th><td><input type="text" id="hkr-l-alt" name="loc[header_image_alt]" class="large-text" value="<?php echo esc_attr( $loc['header_image_alt'] ); ?>"></td></tr>
 						<tr><th><?php esc_html_e( 'Email header image (optional)', 'hakka-reservations' ); ?></th><td>
@@ -276,13 +283,11 @@ class HKR_Admin_Locations {
 							<th><?php esc_html_e( 'Active', 'hakka-reservations' ); ?></th>
 							<th></th>
 						</tr></thead>
-						<tbody>
 						<?php
 						foreach ( $areas as $i => $a ) {
 							self::area_row( $i, $a );
 						}
 						?>
-						</tbody>
 					</table>
 					<template id="hkr-area-template"><?php self::area_row( '__i__', array() ); ?></template>
 					<p><button type="button" class="button hkr-add-area"><?php esc_html_e( 'Add booking type', 'hakka-reservations' ); ?></button></p>
@@ -348,7 +353,10 @@ class HKR_Admin_Locations {
 		$n     = 'areas[' . $i . ']';
 		$short = array( 1 => 'M', 2 => 'T', 3 => 'W', 4 => 'T', 5 => 'F', 6 => 'S', 7 => 'S' );
 		$names = HKR_Locations::weekdays();
+		$image = isset( $a['image_id'] ) ? (int) $a['image_id'] : 0;
+		$thumb = $image ? wp_get_attachment_image_url( $image, 'thumbnail' ) : '';
 		?>
+		<tbody class="hkr-area">
 		<tr class="hkr-area-row">
 			<td><input type="hidden" name="<?php echo esc_attr( $n ); ?>[id]" value="<?php echo esc_attr( $a['id'] ); ?>"><input type="text" name="<?php echo esc_attr( $n ); ?>[name]" value="<?php echo esc_attr( $a['name'] ); ?>" placeholder="<?php esc_attr_e( 'e.g. Dining', 'hakka-reservations' ); ?>"></td>
 			<td><input type="text" name="<?php echo esc_attr( $n ); ?>[description]" value="<?php echo esc_attr( $a['description'] ); ?>"></td>
@@ -365,6 +373,21 @@ class HKR_Admin_Locations {
 			<td><input type="checkbox" name="<?php echo esc_attr( $n ); ?>[active]" value="1" <?php checked( $a['active'], 1 ); ?>></td>
 			<td><button type="button" class="button-link hkr-remove-row"><?php esc_html_e( 'Remove', 'hakka-reservations' ); ?></button></td>
 		</tr>
+		<tr class="hkr-area-photo">
+			<td colspan="10">
+				<details>
+					<summary>
+						<span class="hkr-area-thumb"><?php if ( $thumb ) : ?><img src="<?php echo esc_url( $thumb ); ?>" alt=""><?php endif; ?></span>
+						<?php echo $image ? esc_html__( 'Photo for this booking type – change or position it', 'hakka-reservations' ) : esc_html__( 'Add a photo for this booking type', 'hakka-reservations' ); ?>
+					</summary>
+					<div class="hkr-area-photo__body">
+						<?php HKR_Admin::image_field( $n . '[image_id]', $image, __( 'Shown on this option in the booking form, and in the header when a guest picks it (e.g. a photo of the bar). Leave empty to keep the location photo.', 'hakka-reservations' ), 'hkr-area-img-' . $i ); ?>
+						<?php HKR_Admin::frame_editor( $n . '[frame]', isset( $a['image_frame'] ) ? $a['image_frame'] : array(), 'hkr-area-img-' . $i, '', array( $a['name'] ? $a['name'] : __( 'Booking type', 'hakka-reservations' ), '' ) ); ?>
+					</div>
+				</details>
+			</td>
+		</tr>
+		</tbody>
 		<?php
 	}
 
@@ -453,7 +476,7 @@ class HKR_Admin_Locations {
 		$s_in     = isset( $_POST['settings'] ) ? (array) wp_unslash( $_POST['settings'] ) : array();
 		$settings = HKR_Locations::default_settings();
 		foreach ( $settings as $key => $default ) {
-			if ( 'day_overrides' === $key ) {
+			if ( in_array( $key, array( 'day_overrides', 'hero_frame', 'hero_mobile_id' ), true ) ) {
 				continue;
 			}
 			$value = isset( $s_in[ $key ] ) ? trim( (string) $s_in[ $key ] ) : '';
@@ -483,6 +506,8 @@ class HKR_Admin_Locations {
 			}
 		}
 		$settings['day_overrides'] = $overrides;
+		$settings['hero_frame']    = hkr_sanitize_frame( isset( $_POST['hero_frame'] ) ? (array) wp_unslash( $_POST['hero_frame'] ) : array() );
+		$settings['hero_mobile_id'] = isset( $_POST['hero_mobile_id'] ) ? absint( $_POST['hero_mobile_id'] ) : 0;
 		$data['settings']          = $settings;
 
 		$new_id = HKR_Locations::save( $data, $id );

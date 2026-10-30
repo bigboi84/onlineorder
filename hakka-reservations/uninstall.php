@@ -16,7 +16,7 @@ if ( empty( $hkr_settings['delete_on_uninstall'] ) ) {
 }
 
 global $wpdb;
-foreach ( array( 'locations', 'areas', 'bookings', 'booking_log', 'message_log' ) as $hkr_table ) {
+foreach ( array( 'locations', 'areas', 'blocks', 'bookings', 'booking_log', 'message_log' ) as $hkr_table ) {
 	$wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'hkr_' . $hkr_table ); // phpcs:ignore WordPress.DB
 }
 foreach ( array( 'staff_page_id', 'manage_page_id', 'test_page_id' ) as $hkr_key ) {

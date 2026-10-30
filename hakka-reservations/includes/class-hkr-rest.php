@@ -79,6 +79,11 @@ class HKR_Rest {
 		register_rest_route( self::NS, '/staff/bookings/(?P<id>\d+)', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'staff_update' ), 'permission_callback' => $can_edit ) );
 		register_rest_route( self::NS, '/staff/bookings/(?P<id>\d+)/status', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'staff_status' ), 'permission_callback' => $can_edit ) );
 		register_rest_route( self::NS, '/staff/bookings/(?P<id>\d+)/note', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'staff_note' ), 'permission_callback' => $can_edit ) );
+		register_rest_route( self::NS, '/staff/blocks', array(
+			array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'staff_blocks' ), 'permission_callback' => $can_view ),
+			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'staff_block_add' ), 'permission_callback' => $can_edit ),
+		) );
+		register_rest_route( self::NS, '/staff/blocks/(?P<id>\d+)/delete', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'staff_block_delete' ), 'permission_callback' => $can_edit ) );
 	}
 
 	private static function error( WP_Error $e, $status = 400 ) {
@@ -450,6 +455,7 @@ class HKR_Rest {
 				'covers'    => $covers,
 				'pending'   => $pending['total'],
 				'stats'     => self::staff_stats( $ids ),
+				'blocks'    => array_map( array( __CLASS__, 'block_payload' ), HKR_Blocks::between( $ids, hkr_now()->format( 'Y-m-d' ), hkr_now()->modify( '+366 days' )->format( 'Y-m-d' ) ) ),
 				'latestId'  => $latest,
 				'locations' => self::staff_locations_payload(),
 			)
@@ -523,13 +529,120 @@ class HKR_Rest {
 				$rem   = HKR_Availability::remaining( $loc, $area, $date, $slot[0], $slot[1], true, $exclude );
 				$out[] = array(
 					'time'      => $slot[0],
+					'end'       => $slot[1],
 					'label'     => hkr_format_time( $slot[0] ),
 					'left'      => $rem['left'],
 					'available' => ! $rem['full'] && ( null === $rem['left'] || $rem['left'] >= $party ),
+					'blocked'   => (bool) HKR_Blocks::find( $loc['id'], $area ? $area['id'] : 0, $date, $slot[0] ),
 				);
 			}
 		}
 		return rest_ensure_response( array( 'slots' => $out ) );
+	}
+
+	/* ----- Online booking blocks ----- */
+
+	private static function block_payload( $b ) {
+		static $locs = array(), $areas = array(), $users = array();
+		if ( ! isset( $locs[ $b['location_id'] ] ) ) {
+			$loc                        = HKR_Locations::get( $b['location_id'] );
+			$locs[ $b['location_id'] ] = $loc ? $loc['name'] : '';
+		}
+		if ( $b['area_id'] && ! isset( $areas[ $b['area_id'] ] ) ) {
+			$area                   = HKR_Locations::area( $b['area_id'] );
+			$areas[ $b['area_id'] ] = $area ? $area['name'] : '';
+		}
+		if ( $b['created_by'] && ! isset( $users[ $b['created_by'] ] ) ) {
+			$user                        = get_userdata( $b['created_by'] );
+			$users[ $b['created_by'] ] = $user ? $user->display_name : '';
+		}
+		return array(
+			'id'         => $b['id'],
+			'locationId' => $b['location_id'],
+			'location'   => $locs[ $b['location_id'] ],
+			'areaId'     => $b['area_id'],
+			'area'       => $b['area_id'] ? $areas[ $b['area_id'] ] : '',
+			'date'       => $b['date'],
+			'dateLabel'  => hkr_format_date( $b['date'], 'D j M' ),
+			'allDay'     => $b['all_day'],
+			'from'       => $b['time_from'],
+			'to'         => $b['time_to'],
+			'timeLabel'  => $b['all_day'] ? __( 'All day', 'hakka-reservations' ) : hkr_format_time( $b['time_from'] ),
+			'note'       => $b['note'],
+			'by'         => $b['created_by'] ? $users[ $b['created_by'] ] : '',
+		);
+	}
+
+	public static function staff_blocks( WP_REST_Request $req ) {
+		$ids  = self::staff_location_ids( (int) $req->get_param( 'location' ) );
+		$from = hkr_now()->format( 'Y-m-d' );
+		$to   = hkr_now()->modify( '+366 days' )->format( 'Y-m-d' );
+		return rest_ensure_response( array( 'blocks' => array_map( array( __CLASS__, 'block_payload' ), HKR_Blocks::between( $ids, $from, $to ) ) ) );
+	}
+
+	/**
+	 * Body: location, area (0 = every type), from, to (dates, to optional), times (array of slot starts; empty = whole day), note.
+	 */
+	public static function staff_block_add( WP_REST_Request $req ) {
+		$loc = HKR_Locations::get( (int) $req->get_param( 'location' ) );
+		if ( ! $loc || ! hkr_user_can_location( $loc['id'] ) ) {
+			return self::error( new WP_Error( 'hkr_forbidden', __( 'You cannot change this location.', 'hakka-reservations' ) ), 403 );
+		}
+		$area_id = (int) $req->get_param( 'area' );
+		if ( $area_id && ! self::area_for( $loc, $area_id ) ) {
+			$area_id = 0;
+		}
+		$from = (string) $req->get_param( 'from' );
+		$to   = (string) $req->get_param( 'to' );
+		$to   = '' === $to ? $from : $to;
+		if ( ! HKR_Availability::valid_date( $from ) || ! HKR_Availability::valid_date( $to ) || $to < $from ) {
+			return self::error( new WP_Error( 'hkr_date', __( 'Please choose a valid date (and an end date on or after it).', 'hakka-reservations' ) ) );
+		}
+		if ( $from < hkr_now()->format( 'Y-m-d' ) ) {
+			return self::error( new WP_Error( 'hkr_date', __( 'That date has already passed.', 'hakka-reservations' ) ) );
+		}
+		$days = (int) ( new DateTimeImmutable( $from ) )->diff( new DateTimeImmutable( $to ) )->days;
+		if ( $days > 92 ) {
+			return self::error( new WP_Error( 'hkr_date', __( 'Please block up to three months at a time.', 'hakka-reservations' ) ) );
+		}
+		$times = array_values( array_unique( array_filter( array_map( 'strval', (array) $req->get_param( 'times' ) ), static function ( $t ) {
+			return (bool) preg_match( '/^([01]\d|2[0-3]):[0-5]\d$/', $t );
+		} ) ) );
+		if ( $req->get_param( 'times' ) && ! $times ) {
+			return self::error( new WP_Error( 'hkr_time', __( 'Please choose at least one time.', 'hakka-reservations' ) ) );
+		}
+		$note  = mb_substr( sanitize_text_field( (string) $req->get_param( 'note' ) ), 0, 190 );
+		$added = 0;
+		$day   = new DateTimeImmutable( $from, hkr_tz() );
+		for ( $i = 0; $i <= $days; $i++, $day = $day->modify( '+1 day' ) ) {
+			$ymd = $day->format( 'Y-m-d' );
+			if ( ! $times ) {
+				HKR_Blocks::add( $loc['id'], $area_id, $ymd, '', '', $note, get_current_user_id() );
+				++$added;
+				continue;
+			}
+			// Only block times that are real slots on that day.
+			foreach ( HKR_Availability::slot_times( $loc, $ymd ) as $slot ) {
+				if ( in_array( $slot[0], $times, true ) ) {
+					HKR_Blocks::add( $loc['id'], $area_id, $ymd, $slot[0], $slot[1], $note, get_current_user_id() );
+					++$added;
+				}
+			}
+		}
+		if ( ! $added ) {
+			return self::error( new WP_Error( 'hkr_time', __( 'Those times are not open on the chosen day(s), so nothing was blocked.', 'hakka-reservations' ) ) );
+		}
+		hkr_log( 0, 'blocks_added', '', sprintf( '%s: %s – %s, %s (%d)', $loc['name'], $from, $to, $times ? implode( ' ', $times ) : 'all day', $added ) );
+		return self::staff_blocks( new WP_REST_Request( 'GET' ) );
+	}
+
+	public static function staff_block_delete( WP_REST_Request $req ) {
+		$b = HKR_Blocks::get( (int) $req['id'] );
+		if ( ! $b || ! hkr_user_can_location( $b['location_id'] ) ) {
+			return self::error( new WP_Error( 'hkr_forbidden', __( 'You cannot change this block.', 'hakka-reservations' ) ), 403 );
+		}
+		HKR_Blocks::delete( $b['id'] );
+		return self::staff_blocks( new WP_REST_Request( 'GET' ) );
 	}
 
 	private static function staff_guard( $id ) {

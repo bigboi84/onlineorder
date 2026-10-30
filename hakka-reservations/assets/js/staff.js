@@ -31,7 +31,8 @@
 		chair: '<path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z"/><path d="M5 18v2"/><path d="M19 18v2"/>',
 		userX: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5"/><path d="m22 8-5 5"/>',
 		inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
-		flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>'
+		flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>',
+		lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'
 	};
 
 	function icon( name ) {
@@ -202,6 +203,9 @@
 				el( 'div', { class: 'hkr-s-head__actions' }, [
 					this.soundBtn,
 					this.cfg.adminUrl ? el( 'a', { class: 'hkr-s-btn hkr-s-btn--quiet hkr-s-hide-sm', href: this.cfg.adminUrl }, [ icon( 'grid' ), el( 'span', { text: 'Admin' } ) ] ) : null,
+					this.cfg.canEdit ? btn( 'Block times', 'lock', 'hkr-s-btn--ghost hkr-s-blockbtn', function () {
+						self.blockDialog();
+					} ) : null,
 					this.cfg.canEdit ? btn( 'Add booking', 'plus', 'hkr-s-btn--primary', function () {
 						self.editDialog( null );
 					} ) : null,
@@ -292,12 +296,13 @@
 			this.statusChips
 		] );
 
+		this.blocksPanel = el( 'section', { class: 'hkr-s-blocks', 'aria-label': 'Closed to online bookings', hidden: true } );
 		this.summary = el( 'div', { class: 'hkr-s-summary', 'aria-live': 'polite' } );
 		this.list = el( 'div', { class: 'hkr-s-list' } );
 		this.list.appendChild( this.skeleton() );
 		this.toasts = el( 'div', { class: 'hkr-s-toasts', 'aria-live': 'assertive' } );
 		this.dialog = el( 'dialog', { class: 'hkr-s-dialog' } );
-		var main = el( 'main', { class: 'hkr-s-main' }, [ tiles, toolbar, this.summary, this.list ] );
+		var main = el( 'main', { class: 'hkr-s-main' }, [ tiles, toolbar, this.blocksPanel, this.summary, this.list ] );
 		[ head, main, this.toasts, this.dialog ].forEach( function ( n ) {
 			self.root.appendChild( n );
 		} );
@@ -427,6 +432,8 @@
 			self.summary.innerHTML = '';
 			self.summary.appendChild( el( 'h2', { class: 'hkr-s-summary__title', text: title } ) );
 			self.summary.appendChild( el( 'span', { class: 'hkr-s-summary__meta', text: plural( data.bookings.length, 'booking', 'bookings' ) + ' · ' + plural( data.covers, 'guest', 'guests' ) } ) );
+			self.blocks = data.blocks || [];
+			self.renderBlocks();
 			self.renderList( data.bookings );
 		} ).catch( function ( e ) {
 			if ( ticket !== self.ticket ) {
@@ -631,6 +638,215 @@
 		] );
 	};
 
+	/* ----- Online booking blocks ----- */
+
+	/** Blocks that belong together (same day, location, type and note) are shown as one line. */
+	Staff.prototype.groupBlocks = function () {
+		var s = this.state;
+		var groups = [];
+		var index = {};
+		( this.blocks || [] ).forEach( function ( b ) {
+			if ( s.location && b.locationId !== s.location ) {
+				return;
+			}
+			if ( s.view === 'day' && s.date && b.date !== s.date ) {
+				return;
+			}
+			var key = [ b.date, b.locationId, b.areaId, b.note, b.allDay ? 'day' : 'times' ].join( '|' );
+			if ( ! index[ key ] ) {
+				index[ key ] = { date: b.date, dateLabel: b.dateLabel, location: b.location, locationId: b.locationId, area: b.area, note: b.note, by: b.by, allDay: b.allDay, times: [], ids: [] };
+				groups.push( index[ key ] );
+			}
+			index[ key ].ids.push( b.id );
+			if ( ! b.allDay ) {
+				index[ key ].times.push( b.timeLabel );
+			}
+		} );
+		return groups;
+	};
+
+	Staff.prototype.renderBlocks = function () {
+		var self = this;
+		var groups = this.groupBlocks();
+		this.blocksPanel.innerHTML = '';
+		this.blocksPanel.hidden = ! groups.length;
+		if ( ! groups.length ) {
+			return;
+		}
+		var shown = this.showAllBlocks ? groups : groups.slice( 0, 6 );
+		this.blocksPanel.appendChild( el( 'div', { class: 'hkr-s-blocks__head' }, [
+			el( 'span', { class: 'hkr-s-blocks__icon' }, [ icon( 'lock' ) ] ),
+			el( 'div', {}, [
+				el( 'h2', { class: 'hkr-s-blocks__title', text: 'Closed to online bookings' } ),
+				el( 'p', { class: 'hkr-s-blocks__sub', text: 'Guests see these times as full. Staff can still add phone bookings and walk-ins.' } )
+			] )
+		] ) );
+		var list = el( 'ul', { class: 'hkr-s-blocks__list' } );
+		shown.forEach( function ( g ) {
+			var bits = [ g.allDay ? 'All day' : g.times.join( ', ' ) ];
+			if ( self.locations.length > 1 ) {
+				bits.push( self.names[ g.locationId ] || g.location );
+			}
+			bits.push( g.area ? g.area + ' only' : 'All booking types' );
+			var who = g.note ? '“' + g.note + '”' + ( g.by ? ' – ' + g.by : '' ) : ( g.by ? 'by ' + g.by : '' );
+			list.appendChild( el( 'li', { class: 'hkr-s-block' }, [
+				el( 'strong', { class: 'hkr-s-block__date', text: g.dateLabel } ),
+				el( 'span', { class: 'hkr-s-block__what', text: bits.join( ' · ' ) } ),
+				who ? el( 'span', { class: 'hkr-s-block__note', text: who } ) : null,
+				self.cfg.canEdit ? btn( 'Open for online booking again', 'x', 'hkr-s-btn--quiet hkr-s-block__remove', function () {
+					self.removeBlocks( g, this );
+				}, true ) : null
+			] ) );
+		} );
+		this.blocksPanel.appendChild( list );
+		if ( groups.length > 6 ) {
+			this.blocksPanel.appendChild( el( 'button', { type: 'button', class: 'hkr-s-toggle', onclick: function () {
+				self.showAllBlocks = ! self.showAllBlocks;
+				self.renderBlocks();
+			} }, [ this.showAllBlocks ? 'Show fewer' : 'Show all ' + groups.length ] ) );
+		}
+	};
+
+	Staff.prototype.removeBlocks = function ( g, button ) {
+		var self = this;
+		var label = g.dateLabel + ( g.allDay ? ' (all day)' : ' at ' + g.times.join( ', ' ) );
+		if ( ! window.confirm( 'Open ' + label + ' for online bookings again?' ) ) {
+			return;
+		}
+		button.disabled = true;
+		g.ids.reduce( function ( chain, id ) {
+			return chain.then( function () {
+				return self.api( '/staff/blocks/' + id + '/delete', { method: 'POST', body: {} } );
+			} );
+		}, Promise.resolve() ).then( function () {
+			self.toast( label + ' is open for online bookings again.' );
+			self.load();
+		} ).catch( function ( e ) {
+			button.disabled = false;
+			self.toast( e.message, true );
+		} );
+	};
+
+	Staff.prototype.blockDialog = function () {
+		var self = this;
+		var locs = this.locations;
+		if ( ! locs.length ) {
+			return;
+		}
+		var start = this.state.view === 'day' && this.state.date && this.state.date >= this.today ? this.state.date : this.today;
+		var locSel = el( 'select', { class: 'hkr-s-input' } );
+		locs.forEach( function ( l ) {
+			locSel.appendChild( el( 'option', { value: String( l.id ), text: l.name, selected: self.state.location === l.id } ) );
+		} );
+		var areaSel = el( 'select', { class: 'hkr-s-input' } );
+		var from = el( 'input', { type: 'date', class: 'hkr-s-input', required: true, min: this.today, value: start } );
+		var to = el( 'input', { type: 'date', class: 'hkr-s-input', min: this.today } );
+		var mode = 'day';
+		var modeSeg = el( 'div', { class: 'hkr-s-seg hkr-s-seg--wide', role: 'group', 'aria-label': 'What to block' } );
+		var timesWrap = el( 'div', { class: 'hkr-s-field hkr-s-field--wide', hidden: true } );
+		var timesGrid = el( 'div', { class: 'hkr-s-timegrid', role: 'group', 'aria-label': 'Times to block' } );
+		var timesHelp = el( 'small', { class: 'hkr-s-help' } );
+		var picked = {};
+		var note = el( 'input', { type: 'text', class: 'hkr-s-input', maxlength: '190', placeholder: 'e.g. Mother’s Day – walk-ins and phone only' } );
+		timesWrap.appendChild( el( 'span', { text: 'Tap the times to block' } ) );
+		timesWrap.appendChild( timesGrid );
+		timesWrap.appendChild( timesHelp );
+
+		[ [ 'day', 'Whole day' ], [ 'times', 'Only some times' ] ].forEach( function ( m ) {
+			modeSeg.appendChild( el( 'button', { type: 'button', class: 'hkr-s-seg__btn' + ( m[ 0 ] === mode ? ' is-active' : '' ), 'data-mode': m[ 0 ], 'aria-pressed': m[ 0 ] === mode ? 'true' : 'false', onclick: function () {
+				mode = m[ 0 ];
+				Array.prototype.forEach.call( modeSeg.children, function ( b ) {
+					var on = b.getAttribute( 'data-mode' ) === mode;
+					b.classList.toggle( 'is-active', on );
+					b.setAttribute( 'aria-pressed', on ? 'true' : 'false' );
+				} );
+				timesWrap.hidden = mode !== 'times';
+				fillTimes();
+			} }, [ m[ 1 ] ] ) );
+		} );
+
+		function fillAreas() {
+			var loc = locs.filter( function ( l ) {
+				return String( l.id ) === locSel.value;
+			} )[ 0 ];
+			areaSel.innerHTML = '';
+			areaSel.appendChild( el( 'option', { value: '0', text: 'All booking types' } ) );
+			( loc ? loc.areas : [] ).filter( function ( a ) {
+				return a.active;
+			} ).forEach( function ( a ) {
+				areaSel.appendChild( el( 'option', { value: String( a.id ), text: a.name + ' only' } ) );
+			} );
+		}
+		function fillTimes() {
+			if ( mode !== 'times' || ! from.value ) {
+				return;
+			}
+			timesGrid.innerHTML = '';
+			timesHelp.textContent = 'Loading times…';
+			self.api( '/staff/slots?location=' + locSel.value + '&area=' + areaSel.value + '&date=' + from.value + '&party=1' ).then( function ( data ) {
+				timesHelp.textContent = data.slots.length ? ( to.value && to.value !== from.value ? 'These times will be blocked on every day in the range.' : '' ) : 'The restaurant is closed on this day.';
+				data.slots.forEach( function ( sl ) {
+					var on = !! picked[ sl.time ];
+					timesGrid.appendChild( el( 'button', {
+						type: 'button',
+						class: 'hkr-s-timechip' + ( on ? ' is-active' : '' ) + ( sl.blocked ? ' is-blocked' : '' ),
+						'aria-pressed': on ? 'true' : 'false',
+						disabled: sl.blocked,
+						title: sl.blocked ? 'Already blocked' : null,
+						onclick: function () {
+							picked[ sl.time ] = ! picked[ sl.time ];
+							this.classList.toggle( 'is-active', picked[ sl.time ] );
+							this.setAttribute( 'aria-pressed', picked[ sl.time ] ? 'true' : 'false' );
+						}
+					}, [ el( 'span', { text: sl.label } ), sl.blocked ? el( 'small', { text: 'Blocked' } ) : null ] ) );
+				} );
+			} ).catch( function ( e ) {
+				timesHelp.textContent = e.message;
+			} );
+		}
+		locSel.addEventListener( 'change', function () {
+			fillAreas();
+			fillTimes();
+		} );
+		[ areaSel, from, to ].forEach( function ( n ) {
+			n.addEventListener( 'change', fillTimes );
+		} );
+		fillAreas();
+
+		var body = el( 'div', { class: 'hkr-s-grid' }, [
+			el( 'p', { class: 'hkr-s-field--wide hkr-s-intro', text: 'Stop online bookings for a busy day or time (e.g. Mother’s Day). Guests will see it as full. You can still add phone bookings and walk-ins here.' } ),
+			locs.length > 1 ? labelled( 'Location', locSel ) : null,
+			labelled( 'Booking type', areaSel ),
+			labelled( 'Date', from ),
+			labelled( 'Until (optional, for several days)', to ),
+			el( 'div', { class: 'hkr-s-field hkr-s-field--wide' }, [ el( 'span', { text: 'Block' } ), modeSeg ] ),
+			timesWrap,
+			el( 'label', { class: 'hkr-s-field hkr-s-field--wide' }, [ el( 'span', { text: 'Reason (staff only, optional)' } ), note ] )
+		] );
+
+		this.openDialog( 'Block online bookings', body, function () {
+			var times = Object.keys( picked ).filter( function ( k ) {
+				return picked[ k ];
+			} );
+			if ( mode === 'times' && ! times.length ) {
+				throw new Error( 'Please tap the times you want to block.' );
+			}
+			if ( to.value && to.value < from.value ) {
+				throw new Error( 'The “until” date must be on or after the first date.' );
+			}
+			return self.api( '/staff/blocks', { method: 'POST', body: {
+				location: parseInt( locSel.value, 10 ),
+				area: parseInt( areaSel.value, 10 ) || 0,
+				from: from.value,
+				to: to.value,
+				times: mode === 'times' ? times : [],
+				note: note.value
+			} } ).then( function () {
+				self.toast( 'Blocked for online bookings.' );
+			} );
+		}, 'Block' );
+	};
+
 	Staff.prototype.changeStatus = function ( b, status, message, notify, button ) {
 		var self = this;
 		if ( button ) {
@@ -796,7 +1012,7 @@
 			self.api( '/staff/slots' + q ).then( function ( data ) {
 				slotHelp.textContent = data.slots.length ? '' : 'Closed on this day.';
 				data.slots.forEach( function ( s ) {
-					var label = s.label + ( s.left !== null ? ' (' + s.left + ' left)' : '' ) + ( s.available ? '' : ' – full' );
+					var label = s.label + ( s.left !== null ? ' (' + s.left + ' left)' : '' ) + ( s.available ? '' : ' – full' ) + ( s.blocked ? ' – blocked online' : '' );
 					var o = el( 'option', { value: s.time, text: label } );
 					if ( s.time === current ) {
 						o.selected = true;

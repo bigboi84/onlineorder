@@ -40,6 +40,46 @@ function hkr_table( $name ) {
 /**
  * Booking statuses and their labels.
  */
+/**
+ * How a photo sits in the booking form header: focus point (percent) and zoom, for desktop and phones.
+ */
+function hkr_default_frame() {
+	return array(
+		'x'  => 50,
+		'y'  => 50,
+		'z'  => 100,
+		'mx' => 50,
+		'my' => 50,
+		'mz' => 100,
+	);
+}
+
+function hkr_sanitize_frame( $in ) {
+	$in  = is_array( $in ) ? $in : hkr_json( $in );
+	$out = hkr_default_frame();
+	foreach ( $out as $key => $default ) {
+		if ( ! isset( $in[ $key ] ) || '' === $in[ $key ] ) {
+			continue;
+		}
+		$value       = (float) $in[ $key ];
+		$out[ $key ] = in_array( $key, array( 'z', 'mz' ), true ) ? (int) min( 250, max( 100, round( $value ) ) ) : round( min( 100, max( 0, $value ) ), 1 );
+	}
+	return $out;
+}
+
+/**
+ * Frame values for the booking form script.
+ */
+function hkr_frame_public( $frame ) {
+	$f = hkr_sanitize_frame( $frame );
+	return array(
+		'pos'  => $f['x'] . '% ' . $f['y'] . '%',
+		'zoom' => $f['z'] / 100,
+		'posM' => $f['mx'] . '% ' . $f['my'] . '%',
+		'zoomM' => $f['mz'] / 100,
+	);
+}
+
 function hkr_statuses() {
 	return array(
 		'pending'   => __( 'Pending', 'hakka-reservations' ),

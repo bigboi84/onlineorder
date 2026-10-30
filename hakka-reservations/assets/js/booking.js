@@ -195,24 +195,78 @@
 		] ) );
 	};
 
-	Booking.prototype.showHero = function ( loc ) {
-		var src = ( loc && loc.image ) || this.cfg.defaultImage || '';
-		var current = this.heroImgs[ 0 ].classList.contains( 'is-active' ) ? 0 : 1;
-		var next = 1 - current;
-		var nextImg = this.heroImgs[ next ];
-		var curImg = this.heroImgs[ current ];
-		this.hero.classList.toggle( 'hkr-hero--noimage', ! src );
-		if ( src && curImg.getAttribute( 'src' ) !== src ) {
-			nextImg.onload = function () {
-				nextImg.classList.add( 'is-active' );
-				curImg.classList.remove( 'is-active' );
+	/** The header photo to show: the chosen booking type's photo, else the location's (phone version on small screens). */
+	Booking.prototype.heroMedia = function ( loc, area ) {
+		var phone = this.phoneQuery && this.phoneQuery.matches;
+		var pick = function ( src, alt, frame, phoneSrc ) {
+			frame = frame || {};
+			return {
+				src: ( phone && phoneSrc ) || src,
+				alt: alt || '',
+				pos: ( phone ? frame.posM : frame.pos ) || '50% 50%',
+				zoom: ( phone ? frame.zoomM : frame.zoom ) || 1
 			};
-			nextImg.alt = loc ? loc.imageAlt : '';
-			nextImg.src = src;
-			if ( nextImg.complete ) {
-				nextImg.onload();
+		};
+		if ( area && area.image ) {
+			return pick( area.image, area.imageAlt || area.name, area.frame );
+		}
+		if ( loc && loc.image ) {
+			return pick( loc.image, loc.imageAlt, loc.frame, loc.imageMobile );
+		}
+		return pick( this.cfg.defaultImage || '', '', null );
+	};
+
+	function frameImg( img, m ) {
+		img.style.objectPosition = m.pos;
+		img.style.transformOrigin = m.pos;
+		img.style.transform = m.zoom > 1 ? 'scale(' + m.zoom + ')' : '';
+	}
+
+	/** Cross-fade the header photo to match the current location and booking type. */
+	Booking.prototype.paintHero = function () {
+		var m = this.heroMedia( this.state.loc, this.state.area );
+		var current = this.heroImgs[ 0 ].classList.contains( 'is-active' ) ? 0 : 1;
+		var nextImg = this.heroImgs[ 1 - current ];
+		var curImg = this.heroImgs[ current ];
+		this.hero.classList.toggle( 'hkr-hero--noimage', ! m.src );
+		if ( ! m.src ) {
+			return;
+		}
+		if ( curImg.getAttribute( 'src' ) === m.src ) {
+			frameImg( curImg, m );
+			curImg.alt = m.alt;
+			return;
+		}
+		frameImg( nextImg, m );
+		nextImg.onload = function () {
+			nextImg.onload = null;
+			nextImg.classList.add( 'is-active' );
+			curImg.classList.remove( 'is-active' );
+		};
+		nextImg.alt = m.alt;
+		nextImg.src = m.src;
+		if ( nextImg.complete && nextImg.naturalWidth ) {
+			nextImg.onload();
+		}
+	};
+
+	Booking.prototype.showHero = function ( loc ) {
+		var self = this;
+		if ( ! this.phoneQuery && window.matchMedia ) {
+			// The header is shaped differently on phones, so it has its own photo position.
+			this.phoneQuery = window.matchMedia( '(max-width: 600px)' );
+			var refresh = function () {
+				if ( self.state.loc && ! self.hero.hidden ) {
+					self.paintHero();
+				}
+			};
+			if ( this.phoneQuery.addEventListener ) {
+				this.phoneQuery.addEventListener( 'change', refresh );
+			} else if ( this.phoneQuery.addListener ) {
+				this.phoneQuery.addListener( refresh );
 			}
 		}
+		this.paintHero();
 		this.heroInfo.innerHTML = '';
 		if ( loc ) {
 			var lines = [ el( 'h2', { class: 'hkr-hero__name', text: loc.name } ) ];
@@ -258,6 +312,7 @@
 		this.showHero( loc );
 		if ( loc.areas.length === 1 ) {
 			this.state.area = loc.areas[ 0 ];
+			this.paintHero();
 		}
 		this.go( loc.areas.length > 1 ? 'type' : 'party', initial );
 	};
@@ -357,6 +412,10 @@
 	Booking.prototype.view_type = function () {
 		var self = this;
 		var loc = this.state.loc;
+		// When some types have photos, give the others a matching strip so the cards line up.
+		var anyPhoto = loc.areas.some( function ( a ) {
+			return !! a.thumb;
+		} );
 		return el( 'div', { class: 'hkr-step' }, [
 			el( 'h2', { class: 'hkr-title', tabindex: '-1', text: this.t.chooseType } ),
 			el( 'div', { class: 'hkr-options' }, loc.areas.map( function ( a ) {
@@ -368,6 +427,7 @@
 					onclick: function () {
 						if ( ! self.state.area || self.state.area.id !== a.id ) {
 							self.state.area = a;
+							self.paintHero();
 							self.state.date = '';
 							self.state.time = '';
 							self.calendar = {};
@@ -376,7 +436,11 @@
 						}
 						self.go( 'party' );
 					}
-				}, [ el( 'strong', { text: a.name } ), a.description ? el( 'span', { text: a.description } ) : null ] );
+				}, [
+					a.thumb ? el( 'span', { class: 'hkr-option__media', 'aria-hidden': 'true' }, [ el( 'img', { src: a.thumb, alt: '', loading: 'lazy', decoding: 'async', style: 'object-position:' + ( a.frame && a.frame.pos ? a.frame.pos : '50% 50%' ) } ) ] ) : ( anyPhoto ? el( 'span', { class: 'hkr-option__media hkr-option__media--empty', 'aria-hidden': 'true' }, [ a.name.charAt( 0 ) ] ) : null ),
+					el( 'strong', { text: a.name } ),
+					a.description ? el( 'span', { text: a.description } ) : null
+				] );
 			} ) ),
 			this.nav( this.prevOf( 'type' ), null )
 		] );

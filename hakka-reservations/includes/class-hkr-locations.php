@@ -29,6 +29,8 @@ class HKR_Locations {
 			'cancel_cutoff'     => 2,
 			'reminder_hours'    => 24,
 			'day_overrides'     => array(),
+			'hero_frame'        => hkr_default_frame(),
+			'hero_mobile_id'    => 0,
 		);
 	}
 
@@ -56,6 +58,7 @@ class HKR_Locations {
 		$loc['active']           = (int) $loc['active'];
 		$loc['accepts_bookings'] = (int) $loc['accepts_bookings'];
 		$loc['settings']         = wp_parse_args( hkr_json( $loc['settings'] ), self::default_settings() );
+		$loc['settings']['hero_frame'] = hkr_sanitize_frame( $loc['settings']['hero_frame'] );
 		$loc['hours']            = self::normalize_hours( hkr_json( $loc['hours'] ) );
 		$loc['special_dates']    = hkr_json( $loc['special_dates'] );
 		return $loc;
@@ -218,6 +221,8 @@ class HKR_Locations {
 		$a['ask_celebration'] = (int) $a['ask_celebration'];
 		$a['active']          = (int) $a['active'];
 		$a['days']            = array_values( array_filter( array_map( 'intval', explode( ',', (string) $a['available_days'] ) ) ) );
+		$a['image_id']        = isset( $a['image_id'] ) ? (int) $a['image_id'] : 0;
+		$a['image_frame']     = hkr_sanitize_frame( isset( $a['image_frame'] ) ? $a['image_frame'] : '' );
 		return $a;
 	}
 
@@ -247,6 +252,10 @@ class HKR_Locations {
 				'active'          => isset( $r['active'] ) ? ( $r['active'] ? 1 : 0 ) : 1,
 				'sort_order'      => isset( $r['sort_order'] ) ? (int) $r['sort_order'] : $i + 1,
 			);
+			if ( array_key_exists( 'image_id', $r ) ) {
+				$data['image_id']    = absint( $r['image_id'] );
+				$data['image_frame'] = wp_json_encode( hkr_sanitize_frame( isset( $r['frame'] ) ? $r['frame'] : array() ) );
+			}
 			$id = isset( $r['id'] ) ? (int) $r['id'] : 0;
 			if ( $id ) {
 				$wpdb->update( $table, $data, array( 'id' => $id, 'location_id' => (int) $location_id ) );
@@ -317,6 +326,20 @@ class HKR_Locations {
 		return $src ? $src[0] : '';
 	}
 
+	/**
+	 * Optional separate header photo for phones. Falls back to the main header photo.
+	 */
+	public static function mobile_image_url( $loc ) {
+		$id = $loc ? (int) $loc['settings']['hero_mobile_id'] : 0;
+		if ( $id ) {
+			$src = wp_get_attachment_image_src( $id, 'large' );
+			if ( $src ) {
+				return $src[0];
+			}
+		}
+		return '';
+	}
+
 	public static function email_image_url( $loc ) {
 		if ( $loc && ! empty( $loc['email_image_id'] ) ) {
 			$src = wp_get_attachment_image_src( (int) $loc['email_image_id'], 'large' );
@@ -373,10 +396,16 @@ class HKR_Locations {
 	public static function public_data( $loc ) {
 		$areas = array();
 		foreach ( self::areas( $loc['id'] ) as $a ) {
+			$photo   = $a['image_id'] ? wp_get_attachment_image_src( $a['image_id'], 'full' ) : false;
+			$thumb   = $a['image_id'] ? wp_get_attachment_image_src( $a['image_id'], 'medium_large' ) : false;
 			$areas[] = array(
 				'id'             => $a['id'],
 				'name'           => $a['name'],
 				'description'    => $a['description'],
+				'image'          => $photo ? $photo[0] : '',
+				'thumb'          => $thumb ? $thumb[0] : ( $photo ? $photo[0] : '' ),
+				'imageAlt'       => $a['image_id'] ? (string) get_post_meta( $a['image_id'], '_wp_attachment_image_alt', true ) : '',
+				'frame'          => hkr_frame_public( $a['image_frame'] ),
 				'minParty'       => $a['min_party'],
 				'maxParty'       => $a['max_party'],
 				'askCelebration' => (bool) $a['ask_celebration'],
@@ -392,6 +421,8 @@ class HKR_Locations {
 			'phoneRaw'    => $loc['phone'],
 			'mapUrl'      => (string) $loc['map_url'],
 			'image'       => self::header_image_url( $loc, 'full' ),
+			'imageMobile' => self::mobile_image_url( $loc ),
+			'frame'       => hkr_frame_public( $s['hero_frame'] ),
 			'imageAlt'    => $loc['header_image_alt'] ? $loc['header_image_alt'] : $loc['name'],
 			'hours'       => self::hours_summary( $loc ),
 			'minParty'    => max( 1, (int) $s['min_party'] ),

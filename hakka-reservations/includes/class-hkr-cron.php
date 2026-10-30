@@ -31,6 +31,7 @@ class HKR_Cron {
 	public static function run() {
 		self::send_reminders();
 		self::apply_retention();
+		HKR_Blocks::cleanup();
 		self::clean_tmp();
 	}
 

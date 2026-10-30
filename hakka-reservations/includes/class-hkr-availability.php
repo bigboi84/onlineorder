@@ -241,14 +241,17 @@ class HKR_Availability {
 			if ( ! $staff && $start_obj < $window['earliest'] ) {
 				continue;
 			}
-			$rem   = self::remaining( $loc, $area, $ymd, $slot[0], $slot[1], $staff );
-			$fits  = ! $rem['full'] && ( null === $rem['left'] || $rem['left'] >= (int) $party );
-			$out[] = array(
+			$rem     = self::remaining( $loc, $area, $ymd, $slot[0], $slot[1], $staff );
+			$fits    = ! $rem['full'] && ( null === $rem['left'] || $rem['left'] >= (int) $party );
+			$blocked = (bool) HKR_Blocks::find( $loc['id'], $area ? $area['id'] : 0, $ymd, $slot[0] );
+			$out[]   = array(
 				'time'      => $slot[0],
 				'end'       => $slot[1],
 				'label'     => hkr_format_time( $slot[0] ),
-				'left'      => $rem['left'],
-				'available' => $fits,
+				// Guests just see a blocked time as full.
+				'left'      => $blocked && ! $staff ? 0 : $rem['left'],
+				'available' => $fits && ( $staff || ! $blocked ),
+				'blocked'   => $staff ? $blocked : null,
 			);
 		}
 		return $out;
@@ -261,13 +264,17 @@ class HKR_Availability {
 		$window = self::window( $loc );
 		$day    = hkr_now()->setTime( 0, 0 );
 		$out    = array();
+		HKR_Blocks::prime( $loc['id'], $day->format( 'Y-m-d' ), $window['last_day'] );
 		while ( $day->format( 'Y-m-d' ) <= $window['last_day'] ) {
 			$ymd   = $day->format( 'Y-m-d' );
-			$open  = (bool) self::slot_times( $loc, $ymd ) && self::area_open_on( $area, $ymd );
-			if ( $open && $ymd === hkr_now()->format( 'Y-m-d' ) ) {
-				// Today is only open if a slot is still ahead of the minimum notice.
-				$open = false;
+			$open    = false;
+			$area_id = $area ? $area['id'] : 0;
+			if ( self::area_open_on( $area, $ymd ) && ! HKR_Blocks::find( $loc['id'], $area_id, $ymd ) ) {
+				// Open if at least one slot is not blocked by staff and (today) is still ahead of the minimum notice.
 				foreach ( self::slot_times( $loc, $ymd ) as $slot ) {
+					if ( HKR_Blocks::find( $loc['id'], $area_id, $ymd, $slot[0] ) ) {
+						continue;
+					}
 					list( $start_dt ) = self::datetimes( $ymd, $slot[0], $slot[1] );
 					if ( new DateTimeImmutable( $start_dt, hkr_tz() ) >= $window['earliest'] ) {
 						$open = true;
@@ -325,6 +332,9 @@ class HKR_Availability {
 			if ( new DateTimeImmutable( $start_dt, hkr_tz() ) < $window['earliest'] || $ymd > $window['last_day'] ) {
 				return new WP_Error( 'hkr_window', __( 'That time can no longer be booked online. Please choose another time or call us.', 'hakka-reservations' ) );
 			}
+		}
+		if ( ! $staff && HKR_Blocks::find( $loc['id'], $area ? $area['id'] : 0, $ymd, $slot[0] ) ) {
+			return new WP_Error( 'hkr_full', __( 'Sorry, that time is fully booked online. Please choose another time or call us.', 'hakka-reservations' ) );
 		}
 		$rem = self::remaining( $loc, $area, $ymd, $slot[0], $slot[1], $staff, isset( $args['exclude'] ) ? (int) $args['exclude'] : 0 );
 		if ( $rem['full'] || ( null !== $rem['left'] && $rem['left'] < $party ) ) {

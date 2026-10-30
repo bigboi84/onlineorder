@@ -97,15 +97,59 @@ class HKR_Admin {
 	/**
 	 * Media-library picker for an image ID field.
 	 */
-	public static function image_field( $name, $attachment_id, $help = '' ) {
-		$url = $attachment_id ? wp_get_attachment_image_url( (int) $attachment_id, 'medium' ) : '';
+	public static function image_field( $name, $attachment_id, $help = '', $field_id = '' ) {
+		$url   = $attachment_id ? wp_get_attachment_image_url( (int) $attachment_id, 'medium' ) : '';
+		$large = $attachment_id ? wp_get_attachment_image_url( (int) $attachment_id, 'large' ) : '';
 		?>
-		<div class="hkr-image-field">
+		<div class="hkr-image-field"<?php echo $field_id ? ' id="' . esc_attr( $field_id ) . '"' : ''; ?> data-large="<?php echo esc_url( $large ); ?>">
 			<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( (int) $attachment_id ); ?>" class="hkr-image-id">
 			<div class="hkr-image-preview"><?php if ( $url ) : ?><img src="<?php echo esc_url( $url ); ?>" alt=""><?php endif; ?></div>
 			<button type="button" class="button hkr-image-choose"><?php esc_html_e( 'Choose image', 'hakka-reservations' ); ?></button>
 			<button type="button" class="button-link hkr-image-remove" <?php echo $url ? '' : 'hidden'; ?>><?php esc_html_e( 'Remove', 'hakka-reservations' ); ?></button>
 			<?php if ( $help ) : ?><p class="description"><?php echo esc_html( $help ); ?></p><?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Drag-to-position previews (desktop and phone) for a booking form header photo.
+	 *
+	 * @param string $name       Input name prefix, e.g. "hero_frame" or "areas[3][frame]".
+	 * @param array  $frame      Saved frame (see hkr_default_frame()).
+	 * @param string $source     ID of the image field that holds the photo.
+	 * @param string $mob_source ID of an optional separate phone photo field.
+	 * @param array  $sample     Text drawn over the preview: array( title, line ).
+	 */
+	public static function frame_editor( $name, $frame, $source, $mob_source = '', $sample = array() ) {
+		$f      = hkr_sanitize_frame( $frame );
+		$sample = array_values( (array) $sample ) + array( '', '' );
+		$views  = array(
+			'd' => array( __( 'Desktop and tablet', 'hakka-reservations' ), 'x', 'y', 'z' ),
+			'm' => array( __( 'Phone', 'hakka-reservations' ), 'mx', 'my', 'mz' ),
+		);
+		?>
+		<div class="hkr-framer" data-source="<?php echo esc_attr( $source ); ?>" data-mob-source="<?php echo esc_attr( $mob_source ); ?>">
+			<p class="hkr-framer__empty"><?php esc_html_e( 'Choose a photo first, then drag it here to choose which part shows.', 'hakka-reservations' ); ?></p>
+			<div class="hkr-framer__views">
+				<?php foreach ( $views as $mode => $v ) : ?>
+					<div class="hkr-framer__view hkr-framer__view--<?php echo esc_attr( $mode ); ?>" data-mode="<?php echo esc_attr( $mode ); ?>">
+						<p class="hkr-framer__label"><?php echo esc_html( $v[0] ); ?></p>
+						<div class="hkr-framer__frame" tabindex="0" role="application" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: Desktop or Phone */ __( '%s preview. Drag the photo, or use the arrow keys, to move it.', 'hakka-reservations' ), $v[0] ) ); ?>">
+							<img alt="" draggable="false">
+							<span class="hkr-framer__shade"></span>
+							<span class="hkr-framer__sample"><strong><?php echo esc_html( $sample[0] ); ?></strong><span><?php echo esc_html( $sample[1] ); ?></span></span>
+							<span class="hkr-framer__hint"><?php esc_html_e( 'Drag to move', 'hakka-reservations' ); ?></span>
+						</div>
+						<div class="hkr-framer__tools">
+							<label><?php esc_html_e( 'Zoom', 'hakka-reservations' ); ?> <input type="range" min="100" max="250" step="1" class="hkr-framer__zoom" value="<?php echo esc_attr( $f[ $v[3] ] ); ?>"></label>
+							<button type="button" class="button-link hkr-framer__reset"><?php esc_html_e( 'Reset', 'hakka-reservations' ); ?></button>
+						</div>
+						<input type="hidden" class="hkr-framer__x" name="<?php echo esc_attr( $name . '[' . $v[1] . ']' ); ?>" value="<?php echo esc_attr( $f[ $v[1] ] ); ?>">
+						<input type="hidden" class="hkr-framer__y" name="<?php echo esc_attr( $name . '[' . $v[2] . ']' ); ?>" value="<?php echo esc_attr( $f[ $v[2] ] ); ?>">
+						<input type="hidden" class="hkr-framer__z" name="<?php echo esc_attr( $name . '[' . $v[3] . ']' ); ?>" value="<?php echo esc_attr( $f[ $v[3] ] ); ?>">
+					</div>
+				<?php endforeach; ?>
+			</div>
 		</div>
 		<?php
 	}

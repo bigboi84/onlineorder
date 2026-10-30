@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       HAKKA Reservations
  * Description:       Table bookings for HAKKA Port of Spain and HAKKA Brentwood: per-location hours, time slots, booking types with capacity, staff confirmation screen and branded emails routed to each location.
- * Version:           1.0.5
+ * Version:           1.0.6
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            HAKKA Restaurant
@@ -12,8 +12,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HKR_VERSION', '1.0.5' );
-define( 'HKR_DB_VERSION', '1.0.0' );
+define( 'HKR_VERSION', '1.0.6' );
+define( 'HKR_DB_VERSION', '1.0.2' );
 define( 'HKR_FILE', __FILE__ );
 define( 'HKR_DIR', plugin_dir_path( __FILE__ ) );
 define( 'HKR_URL', plugin_dir_url( __FILE__ ) );
@@ -23,6 +23,7 @@ require_once HKR_DIR . 'includes/class-hkr-settings.php';
 require_once HKR_DIR . 'includes/class-hkr-install.php';
 require_once HKR_DIR . 'includes/class-hkr-locations.php';
 require_once HKR_DIR . 'includes/class-hkr-availability.php';
+require_once HKR_DIR . 'includes/class-hkr-blocks.php';
 require_once HKR_DIR . 'includes/class-hkr-bookings.php';
 require_once HKR_DIR . 'includes/class-hkr-mailer.php';
 require_once HKR_DIR . 'includes/class-hkr-roles.php';

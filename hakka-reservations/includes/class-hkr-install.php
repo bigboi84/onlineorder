@@ -78,10 +78,26 @@ class HKR_Install {
   max_party int(11) NULL,
   ask_celebration tinyint(1) NOT NULL DEFAULT 1,
   available_days varchar(20) NOT NULL DEFAULT '',
+  image_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  image_frame varchar(255) NOT NULL DEFAULT '',
   active tinyint(1) NOT NULL DEFAULT 1,
   sort_order int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY  (id),
   KEY location_id (location_id)
+) $charset;";
+
+		$sql[] = 'CREATE TABLE ' . hkr_table( 'blocks' ) . " (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  location_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  area_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  block_date date NOT NULL,
+  time_from varchar(5) NOT NULL DEFAULT '',
+  time_to varchar(5) NOT NULL DEFAULT '',
+  note varchar(190) NOT NULL DEFAULT '',
+  created_by bigint(20) unsigned NOT NULL DEFAULT 0,
+  created_at datetime NULL,
+  PRIMARY KEY  (id),
+  KEY location_date (location_id,block_date)
 ) $charset;";
 
 		$sql[] = 'CREATE TABLE ' . hkr_table( 'bookings' ) . " (
