@@ -94,7 +94,7 @@ The global default sender (`booking@hakkarestaurant.com`) lives in *Settings →
 |---|---|---|
 | Slot length (minutes) | **60** | The booking duration and the step between start times. Options: 30 / 45 / 60 / 90 / 120, or custom. |
 | Start-time step (minutes) | 60 | How often a slot starts (e.g. every 30 min). Default equals the slot length. |
-| Last booking before close (minutes) | 60 | The latest start time is close time minus this |
+| **Last booking before close (minutes)** | **60 (decided for both locations)** | No booking can start in the final hour before closing. The latest start time = closing time minus 60 minutes. Editable per location and per day. |
 | Max covers (guests) per slot | 40 | Total guests booked at the same start time |
 | Max bookings per slot | blank = unlimited | |
 | Min party size | 1 | |
@@ -195,6 +195,19 @@ Custom tables (created on activation, versioned for upgrades). Do not use post m
 Index `location_id, area_id, start_datetime` and `status`.
 
 **Availability rule:** a slot is offered for a booking type if the location is open, the date isn't blocked, the slot is within the notice/advance limits, and `SUM(party_size)` of non-cancelled bookings **of that type** overlapping the slot, plus the new party, is within that type's capacity. The location-wide "max covers per slot" (§3.1) is an optional overall ceiling on top of this. Check again in a transaction at booking time to avoid double-booking.
+
+**Last-booking rule (decided 30 Oct 2026):** at both locations, bookings stop **1 hour before closing**. The last bookable start time is the day's closing time minus 60 minutes, and it applies to each time range in a day. Examples with the 1-hour slots:
+
+| Location / day | Closes | Last bookable start |
+|---|---|---|
+| Port of Spain, Mon-Fri | 9:00pm | 8:00pm |
+| Port of Spain, Sat | 9:00pm | 8:00pm |
+| Port of Spain, Sun | Closed | none |
+| Brentwood, Mon-Thu | 11:00pm | 10:00pm |
+| Brentwood, Fri-Sat | 12:00am | 11:00pm |
+| Brentwood, Sun | 11:00pm | 10:00pm |
+
+(Brentwood's hours are still to be confirmed, see §8.) A special date with custom hours uses the same rule on its own closing time. This applies to online bookings and to bookings staff add.
 
 **Hours rule:** a day's close time of midnight means 24:00 of that same day. Friday 11:00–24:00 is valid and the last slot is computed from it.
 
