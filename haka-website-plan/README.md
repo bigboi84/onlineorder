@@ -241,11 +241,11 @@ Each location has its **own email identity**, so everything goes out from, and t
 
 ### 4D. Decided / still open
 
-**Decided:** no deposits · WhatsApp confirmations · password-protected staff screen where staff confirm bookings · a separate email identity for each location.
+**Decided:** no deposits · WhatsApp confirmations (Business account already in place) · password-protected staff screen where staff confirm bookings · a separate email identity for each location.
 
 **Still open:**
 - [ ] The actual email addresses for each branch (sender and staff alert inboxes)
-- [ ] WhatsApp: one number per location or one shared number to start? Do you already have a WhatsApp Business account?
+- [ ] WhatsApp: one number per location, or one shared number to start? (A WhatsApp Business account already exists. Check that it's connected to a Meta Business account with API access, and which number(s) are on it.)
 - [ ] Staff login: one password per location (the default I've planned), or individual staff accounts?
 - [ ] Should small parties auto-confirm, or should staff always confirm?
 - [ ] Both locations take reservations from day one?
