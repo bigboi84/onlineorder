@@ -94,8 +94,8 @@ The global default sender (`booking@hakkarestaurant.com`) lives in *Settings →
 |---|---|---|
 | Slot length (minutes) | **60** | The booking duration and the step between start times. Options: 30 / 45 / 60 / 90 / 120, or custom. |
 | Start-time step (minutes) | 60 | How often a slot starts (e.g. every 30 min). Default equals the slot length. |
-| **Last booking before close (minutes)** | **60 (decided for both locations)** | No booking can start in the final hour before closing. The latest start time = closing time minus 60 minutes. Editable per location and per day. |
-| Max covers (guests) per slot | 40 | Total guests booked at the same start time |
+| **Last booking before close (minutes)** | **60 (decided for both locations)** | No booking can start in the final hour before closing. The latest start time = closing time minus 60 minutes. **A setting in the backend, so it can be changed at any time** (per location, and optionally per day) without touching code. |
+| **Max covers (guests) per slot, whole location** | 40 (Brentwood: **30**) | Total guests booked at the same start time across all booking types |
 | Max bookings per slot | blank = unlimited | |
 | Min party size | 1 | |
 | Max party size (online) | 10 | Larger parties see "Please call us" or are sent as a request |
@@ -105,15 +105,16 @@ The global default sender (`booking@hakkarestaurant.com`) lives in *Settings →
 | Change/cancel cutoff (hours before) | 2 | |
 | **Per-day overrides** | | Each day can optionally override slot length, covers per slot and max party size |
 
-**Booking types (seating areas) and capacity**
+**Booking types and capacity**
 
-Each location has its own list of booking types. The admin can add, rename, reorder, activate and deactivate them.
+Each location has its own list of booking types. The admin can add, rename, reorder, activate and deactivate them. A booking type can be a *purpose* (Brentwood: **Dining, Event, Corporate Event**, the options on the current form) or a *seating area* (Port of Spain: **Deanna (Private), Bar, Dining area**). The plugin treats both the same way.
 
 | Field | Type | Notes |
 |---|---|---|
 | Name | text | e.g. "Deanna (Private)", "Bar", "Dining area" |
 | Description | text | Shown to the guest on the form |
-| **Capacity per time slot** | number | How many people this type holds in one slot. Bookings of this type are checked against this number. |
+| **Capacity per time slot** | number, optional | How many people this type holds in one slot. Leave blank if the type has no limit of its own and only the location-wide limit applies (as at Brentwood). |
+| **Ask about a celebration** | toggle | When on, the form shows the celebration question (see §5.1) once the guest picks this type. On by default for Dining, Event and Corporate Event. |
 | Hard maximum | number, optional | The most it can take if staff squeeze guests in (staff can book up to this, online bookings stop at the capacity) |
 | Min party size | number | e.g. a private room can require a minimum |
 | Max party size (online) | number | |
@@ -122,7 +123,9 @@ Each location has its own list of booking types. The admin can add, rename, reor
 | Active | toggle | |
 
 - The guest picks the booking type on the form. A type that is full for that slot is shown as unavailable.
-- Capacity is counted **per type, per slot**. A full Bar doesn't block the Dining area.
+- A type with its own capacity is counted **per type, per slot**: a full Bar doesn't block the Dining area.
+- The **location-wide "Max covers per slot"** is a separate ceiling across all types. Brentwood uses this: **30 people per slot in total**, shared between Dining, Event and Corporate Event.
+- A booking must fit both its own type's capacity (if set) and the location-wide limit.
 - If a location only has one area, the booking type step is hidden.
 
 **Confirmation**
@@ -136,6 +139,11 @@ Each location has its own list of booking types. The admin can add, rename, reor
 |---|---|
 | Staff screen password | One password for *this* location's staff screen (stored hashed) |
 | Reminder timing | Hours before the booking (default 24) |
+
+### 3.1b Who can change settings
+- Administrators can change everything.
+- The plugin adds a **Reservations Manager** role (and a `hkr_manage` capability). A person with it can edit locations, hours, the last-booking cutoff, slot capacity, booking types and special dates, and see bookings, without being a full WordPress administrator. Use it for managers such as Marcus.
+- Every settings change is recorded (who, what, when) in the booking log.
 
 ### 3.2 Settings (global)
 - Business name · default country code (+1 868) · date/time format
@@ -188,7 +196,7 @@ Custom tables (created on activation, versioned for upgrades). Do not use post m
 
 - `{prefix}hkr_locations`: id, name, slug, active, accepts_bookings, address, phone, map_url, sort_order, `settings` (JSON for slot/capacity/confirmation options), `hours` (JSON, per weekday), `special_dates` (JSON), notification_emails, from_name, from_email, reply_to, bcc, whatsapp_phone_id, staff_password_hash, timestamps
 - `{prefix}hkr_areas` (booking types): id, location_id, name, description, capacity, hard_max, min_party, max_party, available_days/hours (JSON, optional), requires_manual_confirm, active, sort_order
-- `{prefix}hkr_bookings`: id, ref (unique, e.g. `HK-1042`), location_id, **area_id**, start_datetime, end_datetime, party_size, status (`pending|confirmed|seated|completed|no_show|cancelled|declined`), source (`web|phone|walkin|staff`), guest_name, guest_phone, guest_email, occasion, seating_pref, high_chair, guest_notes, internal_notes, whatsapp_optin, manage_token_hash, reminder_sent_at, created_at, updated_at, created_by
+- `{prefix}hkr_bookings`: id, ref (unique, e.g. `HK-1042`), location_id, **area_id**, start_datetime, end_datetime, party_size, status (`pending|confirmed|seated|completed|no_show|cancelled|declined`), source (`web|phone|walkin|staff`), guest_name, guest_phone, guest_email, celebration_type, celebration_text, seating_pref, high_chair, guest_notes, internal_notes, whatsapp_optin, manage_token_hash, reminder_sent_at, created_at, updated_at, created_by
 - `{prefix}hkr_booking_log`: id, booking_id, action, old_value, new_value, actor, created_at
 - `{prefix}hkr_message_log`: id, booking_id, channel (`email|whatsapp`), template, to, status, error, created_at
 
@@ -207,7 +215,7 @@ Index `location_id, area_id, start_datetime` and `status`.
 | Brentwood, Fri-Sat | 12:00am | 11:00pm |
 | Brentwood, Sun | 11:00pm | 10:00pm |
 
-(Brentwood's hours are still to be confirmed, see §8.) A special date with custom hours uses the same rule on its own closing time. This applies to online bookings and to bookings staff add.
+(Brentwood's hours are still to be confirmed, see §8.) The cutoff is a backend setting, so a manager can change it at any time. A special date with custom hours uses the same rule on its own closing time. This applies to online bookings and to bookings staff add.
 
 **Hours rule:** a day's close time of midnight means 24:00 of that same day. Friday 11:00–24:00 is valid and the last slot is computed from it.
 
@@ -220,7 +228,13 @@ Index `location_id, area_id, start_datetime` and `status`.
 - Steps: **Location → Booking type → Party size → Date → Time slot → Details → Confirm**
 - Location is read from `?loc=` or the visitor's saved choice (cookie `hkr_loc`), and can be changed
 - Date picker greys out closed days and blocked dates. Time slots are the buttons for the chosen location, booking type and date, showing only slots with room (remaining space can optionally be shown, e.g. "6 spots left").
-- Fields: full name, phone, email, occasion, seating preference, high chair, dietary/allergy notes, special requests, terms checkbox
+- Fields: full name, phone, email, celebration (see below), seating preference, high chair, dietary/allergy notes, special requests, terms checkbox
+- **Celebration question (decided 30 Oct 2026):** after the guest picks a booking type that has *Ask about a celebration* on (Dining, Event, Corporate Event), show a box:
+  - **"Are you celebrating something?"** with options **None · Birthday · Anniversary · Other**
+  - If **Other** is chosen, show a text box: *"Tell us what you're celebrating"* (free text, up to about 100 characters)
+  - Optionally a note box for details (e.g. the name of the birthday person)
+  - The answer is saved on the booking and shown on the staff screen and in both emails (see §6)
+  - The options list is editable in *Settings* (admin can add more, such as Graduation or Retirement)
 - Over the max party size: show "Please call {phone}" or send a request for approval
 - Accessible, mobile-first, styled to match the site (black/red theme, Poppins), CSS variables for colours
 - After submit: success message with the reference and the line "We will call you to confirm your booking", plus the emails as above
@@ -254,7 +268,7 @@ Two emails go out for every new booking: one to the guest and one to the locatio
   - **Party size** (e.g. 4 guests)
   - **Booking type** (e.g. Dining area, Bar, Deanna Private)
   - Guest name, phone, email
-  - Occasion, seating preference, high chair
+  - **Celebration** (e.g. Birthday, Anniversary, or the text the guest typed), seating preference, high chair
   - Dietary / allergy notes and special requests
   - Status (*Pending confirmation* or *Confirmed*)
 - **Buttons:** *Add to calendar* (.ics attached too), *Manage / cancel booking*, *Call the restaurant*
@@ -345,7 +359,9 @@ The capacity is the number that online bookings stop at. The separate "hard maxi
 | Capacity in MotoPress | 1 booking per slot (there is no guest or seat count) | MotoPress calendar |
 | Special dates in MotoPress | Closed 16-17 Feb 2026 · 11 May 2025 (Mother's Day) custom hours 7:30pm-10:00pm | MotoPress schedule |
 | Booking types in MotoPress | Dining (categories: Birthday, Reservation) · Event · Corporate Event | MotoPress |
-| Seating areas and seat numbers | **Not on the site: owner to provide** | |
+| **Booking types** | **Dining, Event, Corporate Event** (the options on the current form) | Owner, 30 Oct 2026 |
+| **Capacity** | **30 people per time slot**, for the whole location (shared across the three types) | Owner, 30 Oct 2026 |
+| Separate seating areas | None given. Add later in the backend if needed. | |
 
 **Discrepancy to settle:** the website says Brentwood is open 11am-11pm (to midnight on Fri-Sat), but the booking system only accepts bookings from 10am to 9pm every day. The new plugin needs one set of hours per day. Is the booking window meant to be shorter than opening hours (e.g. last bookings at 9pm), or are the booking hours out of date?
 
@@ -365,7 +381,7 @@ Note: the Port of Spain hours supplied by the owner (Mon-Fri 10am-9pm) look simi
 ## 10. Open items for the owner
 1. ~~Email addresses~~ Decided: guest emails come from `booking@hakkarestaurant.com` for both locations. Staff alerts go to `queenstreet@hakkarestaurant.com` (Port of Spain) and `booking@hakkarestaurant.com` (Brentwood). Both mailboxes must exist and be set up in Post SMTP (SPF/DKIM) so email delivers.
 2. Port of Spain: the street address (phone and map link are supplied)
-2a. The seating areas for Brentwood and their capacity per slot (not on the website)
+2a. ~~Brentwood booking types and capacity~~ Decided: Dining, Event, Corporate Event, 30 people per slot (whole location).
 2d. Brentwood's booking hours: use the website hours, or the 10am-9pm in MotoPress? (see §8)
 2b. ~~Capacity numbers~~ Decided: Port of Spain uses the higher numbers (Deanna 30, Bar 12, Dining area 48).
 2c. Should some booking types always need staff confirmation (e.g. the Deanna private room)? Does the private room have a minimum party size?
