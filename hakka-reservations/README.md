@@ -5,7 +5,12 @@ Built to replace MotoPress Appointment Booking. Full spec: `../haka-website-plan
 
 ## What it does
 
-- **Booking form** `[hakka_booking]` – the guest picks a location with buttons on a header image that swaps per location. Then they choose the booking type, number of guests, date, time and their details (including "Are you celebrating something?"). Only times with room are offered.
+- **Booking form** `[hakka_booking]`:
+  - The guest first picks a location. The location's photo and a Port of Spain / Brentwood switcher then appear, and the photo fades when they switch.
+  - Next they choose the booking type, number of guests, date, time and their details (including "Are you celebrating something?"). Only times with room are offered.
+  - Required fields are marked with *. If anything is missing, the form lists exactly which fields to fix.
+  - A pop-up shows the booking details and reference as soon as it is sent.
+  - The form uses a dark style to match the site, and it protects itself against the theme's button and input styles.
 - **Every booking is confirmed by staff.** The guest is told *"We will call you to confirm your booking."*
 - **Emails routed by location** – the guest email is sent from `booking@hakkarestaurant.com`. The staff alert goes to that location's own address (Port of Spain → `queenstreet@`, Brentwood → `booking@`). Both emails show a clear summary card: date, time, party size, booking type, celebration, allergies.
 - **Staff screen** `[hakka_staff_bookings]` at `/staff-bookings/`:

@@ -1,6 +1,7 @@
 /**
  * HAKKA Reservations – guest booking form.
- * Steps: location (tabs in the header) → booking type → guests → date → time → details → review.
+ * Flow: choose a location (picker only) → photo + location switcher appear →
+ * booking type → guests → date → time → details → review.
  */
 ( function () {
 	'use strict';
@@ -44,15 +45,6 @@
 		} );
 	}
 
-	function getCookie( name ) {
-		var m = document.cookie.match( new RegExp( '(?:^|; )' + name + '=([^;]*)' ) );
-		return m ? decodeURIComponent( m[ 1 ] ) : '';
-	}
-
-	function setCookie( name, value ) {
-		document.cookie = name + '=' + encodeURIComponent( value ) + '; path=/; max-age=31536000; SameSite=Lax';
-	}
-
 	function pad( n ) {
 		return ( n < 10 ? '0' : '' ) + n;
 	}
@@ -74,6 +66,19 @@
 		}
 	}
 
+	var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+	// Server error codes that belong to a field on the details step.
+	var SERVER_FIELD = {
+		hkr_name: 'name',
+		hkr_phone: 'phone',
+		hkr_email: 'email',
+		hkr_celebration: 'celebration_text',
+		hkr_seating: 'seating',
+		hkr_dietary_notes: 'dietary',
+		hkr_special_requests: 'requests'
+	};
+
 	function Booking( root ) {
 		this.root = root;
 		this.cfg = JSON.parse( root.getAttribute( 'data-hkr-config' ) );
@@ -82,6 +87,7 @@
 		this.calendar = {};
 		this.month = null;
 		this.step = 'type';
+		this.serverErrors = null;
 		this.render();
 	}
 
@@ -108,17 +114,21 @@
 		} );
 	};
 
+	/** A location is only pre-selected when the link or shortcode names one (?loc=brentwood). */
 	Booking.prototype.initialLocation = function () {
 		var locs = this.cfg.locations;
+		if ( locs.length === 1 ) {
+			return locs[ 0 ];
+		}
 		var params = new URLSearchParams( window.location.search );
-		var wanted = this.cfg.preselect || params.get( 'loc' ) || getCookie( 'hkr_loc' );
+		var wanted = this.cfg.preselect || params.get( 'loc' );
 		var found = null;
 		locs.forEach( function ( l ) {
 			if ( wanted && ( l.slug === wanted || String( l.id ) === wanted ) ) {
 				found = l;
 			}
 		} );
-		return found || ( locs.length === 1 ? locs[ 0 ] : null );
+		return found;
 	};
 
 	Booking.prototype.render = function () {
@@ -147,12 +157,15 @@
 					'aria-pressed': 'false',
 					'aria-label': l.name,
 					onclick: function () {
-						self.selectLocation( l );
+						if ( ! self.state.loc || self.state.loc.id !== l.id ) {
+							self.selectLocation( l );
+						}
 					}
 				}, [ shared ? l.name.slice( l.name.indexOf( ' ' ) + 1 ) : l.name ] ) );
 			} );
 		}
-		this.hero = el( 'div', { class: 'hkr-hero' }, [
+		// The photo and switcher stay hidden until the guest has chosen a location.
+		this.hero = el( 'div', { class: 'hkr-hero', hidden: true }, [
 			el( 'div', { class: 'hkr-hero__media' }, this.heroImgs ),
 			el( 'div', { class: 'hkr-hero__shade' } ),
 			el( 'div', { class: 'hkr-hero__content' }, [ tabs, this.heroInfo ] )
@@ -166,16 +179,28 @@
 		if ( initial ) {
 			this.selectLocation( initial, true );
 		} else {
-			this.showHero( null );
-			this.body.appendChild( el( 'div', { class: 'hkr-step' }, [
-				el( 'h2', { class: 'hkr-title', text: this.t.chooseLocation, tabindex: '-1' } ),
-				el( 'div', { class: 'hkr-options hkr-options--locations' }, this.cfg.locations.map( function ( l ) {
-					return el( 'button', { type: 'button', class: 'hkr-option', onclick: function () {
-						self.selectLocation( l );
-					} }, [ el( 'strong', { text: l.name } ), el( 'span', { text: l.address } ) ] );
-				} ) )
-			] ) );
+			this.root.classList.add( 'hkr-booking--picking' );
+			this.view_location();
 		}
+	};
+
+	/** First screen: just the choice of location. */
+	Booking.prototype.view_location = function () {
+		var self = this;
+		this.chips.innerHTML = '';
+		this.body.innerHTML = '';
+		this.body.appendChild( el( 'div', { class: 'hkr-step' }, [
+			el( 'h2', { class: 'hkr-title', text: this.t.chooseLocation, tabindex: '-1' } ),
+			el( 'div', { class: 'hkr-options hkr-options--locations' }, this.cfg.locations.map( function ( l ) {
+				return el( 'button', { type: 'button', class: 'hkr-option', onclick: function () {
+					self.selectLocation( l );
+				} }, [
+					el( 'strong', { text: l.name } ),
+					l.address ? el( 'span', { text: l.address } ) : null,
+					l.phone ? el( 'span', { text: l.phone } ) : null
+				] );
+			} ) )
+		] ) );
 	};
 
 	Booking.prototype.showHero = function ( loc ) {
@@ -226,6 +251,7 @@
 	};
 
 	Booking.prototype.selectLocation = function ( loc, initial ) {
+		var self = this;
 		this.state.loc = loc;
 		this.state.area = null;
 		this.state.date = '';
@@ -233,7 +259,16 @@
 		this.calendar = {};
 		this.month = null;
 		this.state.party = Math.max( loc.minParty, Math.min( this.state.party, loc.maxParty ) );
-		setCookie( 'hkr_loc', loc.slug );
+		if ( this.hero.hidden ) {
+			this.hero.classList.add( 'is-entering' );
+			this.hero.hidden = false;
+			this.root.classList.remove( 'hkr-booking--picking' );
+			window.requestAnimationFrame( function () {
+				window.requestAnimationFrame( function () {
+					self.hero.classList.remove( 'is-entering' );
+				} );
+			} );
+		}
 		this.showHero( loc );
 		if ( loc.areas.length === 1 ) {
 			this.state.area = loc.areas[ 0 ];
@@ -300,9 +335,8 @@
 			var h = view.querySelector( '.hkr-title' );
 			if ( h ) {
 				h.focus( { preventScroll: true } );
-				var top = this.root.getBoundingClientRect().top + window.pageYOffset - 80;
 				if ( this.root.getBoundingClientRect().top < 0 ) {
-					window.scrollTo( { top: top, behavior: 'smooth' } );
+					window.scrollTo( { top: this.root.getBoundingClientRect().top + window.pageYOffset - 80, behavior: 'smooth' } );
 				}
 			}
 		}
@@ -541,16 +575,24 @@
 		return wrap;
 	};
 
+	/* ---------- Details form ---------- */
+
+	/**
+	 * One labelled field. Required fields get a red asterisk and aria-required; each field has its own
+	 * error line under it.
+	 */
 	Booking.prototype.field = function ( opts ) {
 		var d = this.state.details;
 		var id = 'hkr-f-' + opts.name + '-' + Math.random().toString( 36 ).slice( 2, 7 );
-		var label = el( 'label', { class: 'hkr-label', for: id }, [ opts.label, opts.optional ? el( 'span', { class: 'hkr-optional', text: ' (' + this.t.optional + ')' } ) : null ] );
+		var star = el( 'span', { class: 'hkr-req', 'aria-hidden': 'true', text: '*' } );
+		star.hidden = ! opts.required;
+		var label = el( 'label', { class: 'hkr-label', for: id }, [ opts.label, ' ', star, opts.optional ? el( 'span', { class: 'hkr-optional', text: ' (' + this.t.optional + ')' } ) : null ] );
 		var input;
 		if ( opts.type === 'textarea' ) {
-			input = el( 'textarea', { id: id, name: opts.name, class: 'hkr-input', rows: '3', maxlength: opts.max || '1000', required: !! opts.required } );
+			input = el( 'textarea', { id: id, name: opts.name, class: 'hkr-input', rows: '3', maxlength: opts.max || '1000' } );
 			input.value = d[ opts.name ] || '';
 		} else if ( opts.type === 'select' ) {
-			input = el( 'select', { id: id, name: opts.name, class: 'hkr-input', required: !! opts.required } );
+			input = el( 'select', { id: id, name: opts.name, class: 'hkr-input' } );
 			opts.options.forEach( function ( o ) {
 				var opt = el( 'option', { value: o[ 0 ], text: o[ 1 ] } );
 				if ( ( d[ opts.name ] || '' ) === o[ 0 ] ) {
@@ -559,22 +601,59 @@
 				input.appendChild( opt );
 			} );
 		} else {
-			input = el( 'input', { id: id, name: opts.name, type: opts.type || 'text', class: 'hkr-input', autocomplete: opts.autocomplete || null, required: !! opts.required, maxlength: opts.max || null, inputmode: opts.inputmode || null } );
+			input = el( 'input', { id: id, name: opts.name, type: opts.type || 'text', class: 'hkr-input', autocomplete: opts.autocomplete || null, maxlength: opts.max || null, inputmode: opts.inputmode || null } );
 			input.value = d[ opts.name ] || '';
 		}
-		var help = opts.help ? el( 'p', { class: 'hkr-help', id: id + '-help', text: opts.help } ) : null;
-		if ( help ) {
-			input.setAttribute( 'aria-describedby', id + '-help' );
+		input.required = !! opts.required;
+		if ( opts.required ) {
+			input.setAttribute( 'aria-required', 'true' );
 		}
-		return { wrap: el( 'div', { class: 'hkr-field' + ( opts.wide ? ' hkr-field--wide' : '' ) }, [ label, input, help ] ), input: input };
+		var help = opts.help ? el( 'p', { class: 'hkr-help', id: id + '-help', text: opts.help } ) : null;
+		var err = el( 'p', { class: 'hkr-field-error', id: id + '-err', hidden: true } );
+		input.setAttribute( 'aria-describedby', ( help ? id + '-help ' : '' ) + id + '-err' );
+		var field = {
+			key: opts.name,
+			label: opts.label,
+			needMsg: opts.needMsg || this.t.required,
+			input: input,
+			star: star,
+			err: err,
+			wrap: el( 'div', { class: 'hkr-field' + ( opts.wide ? ' hkr-field--wide' : '' ) }, [ label, input, help, err ] )
+		};
+		var self = this;
+		var clear = function () {
+			self.clearFieldError( field );
+		};
+		input.addEventListener( 'input', clear );
+		input.addEventListener( 'change', clear );
+		return field;
+	};
+
+	Booking.prototype.setRequired = function ( field, required ) {
+		field.input.required = required;
+		field.star.hidden = ! required;
+		if ( required ) {
+			field.input.setAttribute( 'aria-required', 'true' );
+		} else {
+			field.input.removeAttribute( 'aria-required' );
+		}
+	};
+
+	Booking.prototype.showFieldError = function ( field, message ) {
+		field.err.textContent = message;
+		field.err.hidden = false;
+		field.input.setAttribute( 'aria-invalid', 'true' );
+	};
+
+	Booking.prototype.clearFieldError = function ( field ) {
+		field.err.hidden = true;
+		field.err.textContent = '';
+		field.input.removeAttribute( 'aria-invalid' );
 	};
 
 	Booking.prototype.askCelebration = function () {
 		var s = this.state;
-		if ( s.area ) {
-			return !! s.area.askCelebration;
-		}
-		return true;
+		return s.area ? !! s.area.askCelebration : true;
 	};
 
 	Booking.prototype.view_details = function () {
@@ -584,11 +663,15 @@
 		var d = this.state.details;
 		var form = el( 'form', { class: 'hkr-step hkr-form', novalidate: true } );
 		form.appendChild( el( 'h2', { class: 'hkr-title', tabindex: '-1', text: t.yourDetails } ) );
+		form.appendChild( el( 'p', { class: 'hkr-required-note' }, [ el( 'span', { class: 'hkr-req', 'aria-hidden': 'true', text: '*' } ), ' ' + t.requiredNote ] ) );
+		var alertBox = el( 'div', { class: 'hkr-alert', role: 'alert', tabindex: '-1', hidden: true } );
+		form.appendChild( alertBox );
+
 		var grid = el( 'div', { class: 'hkr-grid' } );
 		var fields = {};
-		fields.name = this.field( { name: 'name', label: t.name, required: true, autocomplete: 'name', max: 120 } );
-		fields.phone = this.field( { name: 'phone', label: t.phone, type: 'tel', required: true, autocomplete: 'tel', inputmode: 'tel', help: t.phoneHelp, max: 30 } );
-		fields.email = this.field( { name: 'email', label: t.email, type: 'email', required: true, autocomplete: 'email', max: 190, wide: true } );
+		fields.name = this.field( { name: 'name', label: t.name, needMsg: t.needName, required: true, autocomplete: 'name', max: 120 } );
+		fields.phone = this.field( { name: 'phone', label: t.phone, needMsg: t.needPhone, type: 'tel', required: true, autocomplete: 'tel', inputmode: 'tel', help: t.phoneHelp, max: 30 } );
+		fields.email = this.field( { name: 'email', label: t.email, needMsg: t.needEmail, type: 'email', required: true, autocomplete: 'email', max: 190, wide: true } );
 		[ 'name', 'phone', 'email' ].forEach( function ( k ) {
 			grid.appendChild( fields[ k ].wrap );
 		} );
@@ -598,7 +681,7 @@
 				return [ c, c ];
 			} ) ).concat( [ [ 'Other', t.other ] ] );
 			fields.celebration = this.field( { name: 'celebration', label: t.celebrating, type: 'select', options: opts, wide: true } );
-			fields.celebration_text = this.field( { name: 'celebration_text', label: t.celebratingWhat, max: 120, wide: true } );
+			fields.celebration_text = this.field( { name: 'celebration_text', label: t.celebratingWhat, needMsg: t.needCelebration, max: 120, wide: true } );
 			fields.celebration_details = this.field( { name: 'celebration_details', label: t.celebrationNote, type: 'textarea', max: 500, wide: true } );
 			grid.appendChild( fields.celebration.wrap );
 			grid.appendChild( fields.celebration_text.wrap );
@@ -606,7 +689,7 @@
 			var toggle = function () {
 				var v = fields.celebration.input.value;
 				fields.celebration_text.wrap.hidden = v !== 'Other';
-				fields.celebration_text.input.required = v === 'Other';
+				self.setRequired( fields.celebration_text, v === 'Other' );
 				fields.celebration_details.wrap.hidden = v === '';
 			};
 			fields.celebration.input.addEventListener( 'change', toggle );
@@ -614,7 +697,7 @@
 		}
 
 		if ( cfg.seating ) {
-			fields.seating = this.field( { name: 'seating', label: t.seating, type: 'select', required: cfg.seating.required, optional: ! cfg.seating.required, options: [ [ '', '—' ] ].concat( cfg.seating.options.map( function ( o ) {
+			fields.seating = this.field( { name: 'seating', label: t.seating, needMsg: t.needSeating, type: 'select', required: cfg.seating.required, optional: ! cfg.seating.required, options: [ [ '', '—' ] ].concat( cfg.seating.options.map( function ( o ) {
 				return [ o, o ];
 			} ) ) } );
 			grid.appendChild( fields.seating.wrap );
@@ -629,7 +712,7 @@
 		if ( cfg.fields.highChair !== 'off' ) {
 			var hc = el( 'input', { type: 'checkbox', name: 'high_chair', id: 'hkr-hc' } );
 			hc.checked = !! d.high_chair;
-			fields.high_chair = { input: hc };
+			fields.high_chair = { key: 'high_chair', input: hc };
 			grid.appendChild( el( 'div', { class: 'hkr-field hkr-field--wide hkr-check' }, [ hc, el( 'label', { for: 'hkr-hc', text: t.highChair } ) ] ) );
 		}
 		form.appendChild( grid );
@@ -638,36 +721,75 @@
 		var hp = el( 'input', { type: 'text', name: 'website', tabindex: '-1', autocomplete: 'off' } );
 		form.appendChild( el( 'div', { class: 'hkr-hp', 'aria-hidden': 'true' }, [ el( 'label', { text: 'Website' } ), hp ] ) );
 
-		var err = el( 'p', { class: 'hkr-error', role: 'alert', hidden: true } );
-		form.appendChild( err );
 		form.appendChild( this.nav( this.prevOf( 'details' ), el( 'button', { type: 'submit', class: 'hkr-btn' }, [ t.next ] ) ) );
+
+		// Show a list of everything that needs fixing, and a message under each field.
+		var showProblems = function ( problems ) {
+			alertBox.innerHTML = '';
+			alertBox.appendChild( el( 'strong', { text: t.fixFields } ) );
+			var list = el( 'ul' );
+			problems.forEach( function ( p ) {
+				var link = el( 'a', { href: '#' + p.f.input.id, text: p.f.label.replace( /\s*\*$/, '' ), onclick: function ( e ) {
+					e.preventDefault();
+					p.f.input.focus();
+				} } );
+				list.appendChild( el( 'li' , {}, [ link, ' – ' + p.short ] ) );
+				self.showFieldError( p.f, p.msg );
+			} );
+			alertBox.appendChild( list );
+			alertBox.hidden = false;
+			alertBox.scrollIntoView( { behavior: 'smooth', block: 'start' } );
+			problems[ 0 ].f.input.focus( { preventScroll: true } );
+		};
 
 		form.addEventListener( 'submit', function ( e ) {
 			e.preventDefault();
-			var bad = null;
+			var problems = [];
+			alertBox.hidden = true;
 			Object.keys( fields ).forEach( function ( k ) {
-				var input = fields[ k ].input;
-				input.removeAttribute( 'aria-invalid' );
+				var f = fields[ k ];
+				var input = f.input;
 				var value = input.type === 'checkbox' ? input.checked : input.value.trim();
-				if ( input.required && ! value && ! ( fields[ k ].wrap && fields[ k ].wrap.hidden ) ) {
-					bad = bad || [ input, t.required ];
-					input.setAttribute( 'aria-invalid', 'true' );
-				}
-				if ( k === 'email' && value && ! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test( value ) ) {
-					bad = bad || [ input, t.invalidEmail ];
-					input.setAttribute( 'aria-invalid', 'true' );
-				}
 				d[ k ] = value;
+				if ( ! f.err ) {
+					return;
+				}
+				self.clearFieldError( f );
+				if ( f.wrap.hidden ) {
+					return;
+				}
+				if ( input.required && ! value ) {
+					problems.push( { f: f, short: t.isRequired, msg: f.needMsg } );
+				} else if ( k === 'email' && value && ! EMAIL_RE.test( value ) ) {
+					problems.push( { f: f, short: t.invalidEmailShort, msg: t.invalidEmail } );
+				} else if ( k === 'phone' && value && value.replace( /\D/g, '' ).length < 7 ) {
+					problems.push( { f: f, short: t.invalidPhoneShort, msg: t.invalidPhone } );
+				}
 			} );
 			d.website = hp.value;
-			if ( bad ) {
-				err.textContent = bad[ 1 ];
-				err.hidden = false;
-				bad[ 0 ].focus();
+			if ( problems.length ) {
+				showProblems( problems );
 				return;
 			}
 			self.go( 'review' );
 		} );
+
+		// Problems the server found when the booking was sent (e.g. a phone number it could not use).
+		if ( this.serverErrors ) {
+			var server = this.serverErrors;
+			this.serverErrors = null;
+			var list = [];
+			Object.keys( server ).forEach( function ( k ) {
+				if ( fields[ k ] && fields[ k ].err ) {
+					list.push( { f: fields[ k ], short: server[ k ], msg: server[ k ] } );
+				}
+			} );
+			if ( list.length ) {
+				window.setTimeout( function () {
+					showProblems( list );
+				}, 0 );
+			}
+		}
 		return form;
 	};
 
@@ -700,10 +822,16 @@
 			dl.appendChild( el( 'dd', { text: r[ 1 ] } ) );
 		} );
 
-		var terms = el( 'input', { type: 'checkbox', id: 'hkr-terms', required: true } );
+		var terms = el( 'input', { type: 'checkbox', id: 'hkr-terms', 'aria-required': 'true', 'aria-describedby': 'hkr-terms-err' } );
+		var termsErr = el( 'p', { class: 'hkr-field-error', id: 'hkr-terms-err', hidden: true } );
+		terms.addEventListener( 'change', function () {
+			termsErr.hidden = true;
+			terms.removeAttribute( 'aria-invalid' );
+		} );
 		var termsBox = el( 'div', { class: 'hkr-terms' }, [
 			this.cfg.terms ? el( 'p', { class: 'hkr-help', text: this.cfg.terms } ) : null,
-			el( 'div', { class: 'hkr-check' }, [ terms, el( 'label', { for: 'hkr-terms' }, [ t.terms, this.cfg.termsUrl ? ' · ' : '', this.cfg.termsUrl ? el( 'a', { href: this.cfg.termsUrl, target: '_blank', rel: 'noopener', text: t.readTerms } ) : null ] ) ] )
+			el( 'div', { class: 'hkr-check' }, [ terms, el( 'label', { for: 'hkr-terms' }, [ t.terms + ' ', el( 'span', { class: 'hkr-req', 'aria-hidden': 'true', text: '*' } ), this.cfg.termsUrl ? ' · ' : '', this.cfg.termsUrl ? el( 'a', { href: this.cfg.termsUrl, target: '_blank', rel: 'noopener', text: t.readTerms } ) : null ] ) ] ),
+			termsErr
 		] );
 		var turnstile = null;
 		if ( this.cfg.turnstileSite ) {
@@ -718,8 +846,9 @@
 		var submit = el( 'button', { type: 'button', class: 'hkr-btn' }, [ t.submit ] );
 		submit.addEventListener( 'click', function () {
 			if ( ! terms.checked ) {
-				err.textContent = t.terms;
-				err.hidden = false;
+				termsErr.textContent = t.termsRequired;
+				termsErr.hidden = false;
+				terms.setAttribute( 'aria-invalid', 'true' );
 				terms.focus();
 				return;
 			}
@@ -759,6 +888,12 @@
 					self.go( 'time' );
 					return;
 				}
+				if ( SERVER_FIELD[ e.code ] ) {
+					self.serverErrors = {};
+					self.serverErrors[ SERVER_FIELD[ e.code ] ] = e.message;
+					self.go( 'details' );
+					return;
+				}
 				err.textContent = e.message || t.error;
 				err.hidden = false;
 				if ( window.turnstile && self.turnstileId !== undefined ) {
@@ -777,6 +912,18 @@
 		] );
 	};
 
+	Booking.prototype.summaryOf = function ( res ) {
+		var t = this.t;
+		return el( 'dl', { class: 'hkr-summary' }, [
+			el( 'dt', { text: t.reference } ), el( 'dd', { text: res.ref } ),
+			el( 'dt', { text: t.location } ), el( 'dd', { text: res.location } ),
+			res.area ? el( 'dt', { text: t.type } ) : null, res.area ? el( 'dd', { text: res.area } ) : null,
+			el( 'dt', { text: t.date } ), el( 'dd', { text: res.date } ),
+			el( 'dt', { text: t.time } ), el( 'dd', { text: res.time } ),
+			el( 'dt', { text: t.party } ), el( 'dd', { text: res.party + ' ' + ( res.party === 1 ? t.guest : t.guests ) } )
+		] );
+	};
+
 	Booking.prototype.done = function ( res ) {
 		var self = this;
 		var t = this.t;
@@ -787,14 +934,7 @@
 			el( 'div', { class: 'hkr-done__icon', 'aria-hidden': 'true', text: '✓' } ),
 			title,
 			el( 'p', { class: 'hkr-done__note', text: res.confirmNote } ),
-			el( 'dl', { class: 'hkr-summary' }, [
-				el( 'dt', { text: t.location } ), el( 'dd', { text: res.location } ),
-				res.area ? el( 'dt', { text: t.type } ) : null, res.area ? el( 'dd', { text: res.area } ) : null,
-				el( 'dt', { text: t.date } ), el( 'dd', { text: res.date } ),
-				el( 'dt', { text: t.time } ), el( 'dd', { text: res.time } ),
-				el( 'dt', { text: t.party } ), el( 'dd', { text: String( res.party ) } )
-			] ),
-			el( 'p', { text: fmt( t.thanksRef, res.ref ) } ),
+			this.summaryOf( res ),
 			el( 'p', { class: 'hkr-help', text: fmt( t.thanksEmail, res.email ) } ),
 			el( 'div', { class: 'hkr-actions' }, [ el( 'button', { type: 'button', class: 'hkr-btn hkr-btn--ghost', onclick: function () {
 				self.state.details = {};
@@ -803,7 +943,50 @@
 				self.go( self.order()[ 0 ] );
 			} }, [ t.bookAnother ] ) ] )
 		] ) );
-		title.focus();
+		this.popup( res, title );
+	};
+
+	/**
+	 * Pop-up over the page as soon as the booking is received. Closing it leaves the same details on the form.
+	 */
+	Booking.prototype.popup = function ( res, returnFocus ) {
+		var t = this.t;
+		var dialog = el( 'dialog', { class: 'hkr-booking hkr-modal', 'aria-labelledby': 'hkr-modal-title', style: this.root.getAttribute( 'style' ) || null } );
+		var close = function () {
+			if ( typeof dialog.close === 'function' && dialog.open ) {
+				dialog.close();
+			}
+			dialog.remove();
+			if ( returnFocus ) {
+				returnFocus.focus();
+			}
+		};
+		var closeBtn = el( 'button', { type: 'button', class: 'hkr-modal__x', 'aria-label': t.close, onclick: close }, [ '×' ] );
+		dialog.appendChild( el( 'div', { class: 'hkr-card hkr-modal__card' }, [
+			closeBtn,
+			el( 'div', { class: 'hkr-done__icon', 'aria-hidden': 'true', text: '✓' } ),
+			el( 'h2', { class: 'hkr-title', id: 'hkr-modal-title', text: t.thanksTitle } ),
+			el( 'p', { class: 'hkr-done__note', text: res.confirmNote } ),
+			this.summaryOf( res ),
+			el( 'p', { class: 'hkr-help', text: fmt( t.thanksEmail, res.email ) } ),
+			el( 'div', { class: 'hkr-actions hkr-actions--center' }, [ el( 'button', { type: 'button', class: 'hkr-btn', onclick: close }, [ t.gotIt ] ) ] )
+		] ) );
+		dialog.addEventListener( 'click', function ( e ) {
+			if ( e.target === dialog ) {
+				close(); // Click on the dark backdrop.
+			}
+		} );
+		dialog.addEventListener( 'cancel', function ( e ) {
+			e.preventDefault();
+			close(); // Escape key.
+		} );
+		document.body.appendChild( dialog );
+		if ( typeof dialog.showModal === 'function' ) {
+			dialog.showModal();
+		} else {
+			dialog.setAttribute( 'open', '' );
+		}
+		closeBtn.focus();
 	};
 
 	function boot() {

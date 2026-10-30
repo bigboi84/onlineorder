@@ -110,3 +110,33 @@
 	.hkr-s-datenav input { flex: 1; }
 	.hkr-s-details { grid-template-columns: 1fr; }
 }
+
+/* Guard against the theme's global button / input / heading styles (red-on-red, upper-case). */
+.hkr-staff button, .hkr-staff input, .hkr-staff select, .hkr-staff textarea, .hkr-staff label,
+.hkr-staff h1, .hkr-staff h2, .hkr-staff h3 { text-transform: none !important; letter-spacing: normal !important; text-shadow: none !important; }
+.hkr-staff button.hkr-s-btn, .hkr-staff a.hkr-s-btn {
+	background: var(--hkr-primary) !important; color: #fff !important; border: 2px solid var(--hkr-primary) !important; border-radius: 999px !important;
+	font-size: 14px !important; font-weight: 700 !important; line-height: 1.2 !important; padding: 0 16px !important; min-height: 42px; margin: 0; box-shadow: none !important; text-decoration: none !important;
+}
+.hkr-staff button.hkr-s-btn:hover, .hkr-staff a.hkr-s-btn:hover { background: color-mix(in srgb, var(--hkr-primary) 78%, #000) !important; border-color: color-mix(in srgb, var(--hkr-primary) 78%, #000) !important; color: #fff !important; filter: none; }
+.hkr-staff button.hkr-s-btn--ghost, .hkr-staff a.hkr-s-btn--ghost { background: #fff !important; color: #111 !important; border-color: #c4c4c4 !important; }
+.hkr-staff button.hkr-s-btn--ghost:hover, .hkr-staff a.hkr-s-btn--ghost:hover { background: #f1f1f1 !important; color: #111 !important; border-color: #111 !important; }
+.hkr-staff button.hkr-s-btn--ok { background: #1f8a4c !important; border-color: #1f8a4c !important; color: #fff !important; }
+.hkr-staff button.hkr-s-btn--ok:hover { background: #166b3a !important; border-color: #166b3a !important; color: #fff !important; }
+.hkr-staff button.hkr-s-btn:disabled { opacity: .6; }
+.hkr-staff .hkr-s-input, .hkr-staff input.hkr-s-input, .hkr-staff select.hkr-s-input, .hkr-staff textarea.hkr-s-input {
+	background: #fff !important; color: #1d1d1d !important; -webkit-text-fill-color: #1d1d1d; border: 1px solid #c4c4c4 !important; border-radius: 9px !important;
+	font-size: 15px !important; line-height: 1.4 !important; padding: 9px 11px !important; height: auto !important; min-height: 42px; margin: 0 !important; box-shadow: none !important;
+}
+.hkr-staff .hkr-s-input:focus { outline: none !important; border-color: var(--hkr-primary) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--hkr-primary) 30%, transparent) !important; }
+.hkr-staff button.hkr-s-more { background: none !important; border: 0 !important; color: #555 !important; text-decoration: underline; padding: 8px 0 0 !important; min-height: 0; font-size: 13px !important; box-shadow: none !important; }
+.hkr-staff button.hkr-s-more:hover { color: #111 !important; }
+.hkr-staff .hkr-s-title, .hkr-staff .hkr-s-time, .hkr-staff .hkr-s-form h2 { font-family: inherit !important; }
+.hkr-staff .hkr-s-title { color: #111 !important; }
+.hkr-staff .hkr-s-time { color: var(--hkr-primary) !important; text-transform: uppercase !important; letter-spacing: .04em !important; }
+.hkr-staff .hkr-s-field span, .hkr-staff .hkr-s-check { color: #1d1d1d !important; }
+.hkr-staff a.hkr-s-phone { color: #b42020 !important; }
+.hkr-staff button:focus-visible, .hkr-staff a:focus-visible { outline: 3px solid #111 !important; outline-offset: 2px !important; }
+.hkr-staff-login input[type="submit"], .hkr-staff-login .button { background: var(--hkr-primary) !important; color: #fff !important; border: 0 !important; border-radius: 999px !important; padding: 12px 26px !important; font-weight: 700 !important; text-transform: none !important; cursor: pointer; }
+.hkr-staff-login input[type="submit"]:hover { background: color-mix(in srgb, var(--hkr-primary) 78%, #000) !important; }
+.hkr-staff-login label { color: #1d1d1d !important; }
