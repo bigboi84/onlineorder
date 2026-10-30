@@ -401,6 +401,10 @@ class HKR_Frontend {
 <meta name="robots" content="noindex, nofollow">
 <title><?php echo esc_html( $title . ' – ' . $name ); ?></title>
 <?php if ( get_site_icon_url() ) : ?><link rel="icon" href="<?php echo esc_url( get_site_icon_url( 64 ) ); ?>"><?php endif; ?>
+<meta name="theme-color" content="#ffffff">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap">
 <link rel="stylesheet" href="<?php echo esc_url( HKR_URL . 'assets/css/staff.css?ver=' . HKR_VERSION ); ?>">
 </head>
 <body class="hkr-staff-app" style="<?php echo esc_attr( self::color_vars() ); ?>">

@@ -4,6 +4,44 @@
 ( function () {
 	'use strict';
 
+	// Lucide icons (ISC licence), drawn inline so the screen needs no icon font.
+	var ICONS = {
+		check: '<path d="M20 6 9 17l-5-5"/>',
+		x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+		plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+		left: '<path d="m15 18-6-6 6-6"/>',
+		right: '<path d="m9 18 6-6-6-6"/>',
+		down: '<path d="m6 9 6 6 6-6"/>',
+		search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+		users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+		phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+		pin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+		bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+		bellOff: '<path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5"/><path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="m2 2 20 20"/>',
+		logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+		grid: '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+		calendar: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>',
+		clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+		gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
+		alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+		info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+		pencil: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+		note: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+		undo: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+		chair: '<path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z"/><path d="M5 18v2"/><path d="M19 18v2"/>',
+		userX: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5"/><path d="m22 8-5 5"/>',
+		inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+		flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>'
+	};
+
+	function icon( name ) {
+		var span = document.createElement( 'span' );
+		span.className = 'hkr-i';
+		span.setAttribute( 'aria-hidden', 'true' );
+		span.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICONS[ name ] + '</svg>';
+		return span;
+	}
+
 	function el( tag, attrs, children ) {
 		var node = document.createElement( tag );
 		if ( attrs ) {
@@ -34,6 +72,17 @@
 		return node;
 	}
 
+	/** A button with an icon and a label. iconOnly keeps the label for screen readers and the tooltip. */
+	function btn( label, iconName, cls, onClick, iconOnly ) {
+		return el( 'button', {
+			type: 'button',
+			class: 'hkr-s-btn ' + ( cls || '' ) + ( iconOnly ? ' hkr-s-btn--icon' : '' ),
+			'aria-label': iconOnly ? label : null,
+			title: iconOnly ? label : null,
+			onclick: onClick
+		}, [ iconName ? icon( iconName ) : null, iconOnly ? null : el( 'span', { text: label } ) ] );
+	}
+
 	function pad( n ) {
 		return ( n < 10 ? '0' : '' ) + n;
 	}
@@ -44,6 +93,35 @@
 		return d.getFullYear() + '-' + pad( d.getMonth() + 1 ) + '-' + pad( d.getDate() );
 	}
 
+	function plural( n, one, many ) {
+		return n + ' ' + ( n === 1 ? one : many );
+	}
+
+	/** "7:00pm" → [ "7:00", "pm" ] for the time column. */
+	function splitTime( label ) {
+		var m = String( label || '' ).match( /^(.*?)\s*([ap]\.?m\.?)$/i );
+		return m ? [ m[ 1 ], m[ 2 ].toUpperCase().replace( /\./g, '' ) ] : [ label, '' ];
+	}
+
+	/** "HAKKA Port of Spain" → "Port of Spain" when every location shares the first word. */
+	function shortNames( locs ) {
+		var first = locs.map( function ( l ) {
+			return l.name.split( ' ' )[ 0 ];
+		} );
+		var shared = locs.length > 1 && first.every( function ( w ) {
+			return w === first[ 0 ];
+		} ) && locs.every( function ( l ) {
+			return l.name.indexOf( ' ' ) > 0;
+		} );
+		var out = {};
+		locs.forEach( function ( l ) {
+			out[ l.id ] = shared ? l.name.slice( l.name.indexOf( ' ' ) + 1 ) : l.name;
+		} );
+		return out;
+	}
+
+	var STATUS_ORDER = [ 'pending', 'confirmed', 'seated', 'completed', 'no_show', 'cancelled', 'declined' ];
+
 	function Staff( root ) {
 		this.root = root;
 		this.cfg = JSON.parse( root.getAttribute( 'data-hkr-staff' ) );
@@ -53,6 +131,8 @@
 			this.highlight = this.cfg.openBooking;
 		}
 		this.locations = [];
+		this.names = {};
+		this.today = '';
 		this.sound = false;
 		try {
 			this.sound = window.localStorage.getItem( 'hkr_sound' ) === '1';
@@ -91,8 +171,10 @@
 	Staff.prototype.build = function () {
 		var self = this;
 		this.root.innerHTML = '';
+
+		/* Top bar */
 		this.badge = el( 'span', { class: 'hkr-s-badge', hidden: true } );
-		this.soundBtn = el( 'button', { type: 'button', class: 'hkr-s-btn hkr-s-btn--ghost', onclick: function () {
+		this.soundBtn = el( 'button', { type: 'button', class: 'hkr-s-btn hkr-s-btn--quiet hkr-s-sound', onclick: function () {
 			self.sound = ! self.sound;
 			try {
 				window.localStorage.setItem( 'hkr_sound', self.sound ? '1' : '0' );
@@ -103,44 +185,88 @@
 			self.updateSoundBtn();
 		} } );
 		this.updateSoundBtn();
+		this.where = el( 'span', { class: 'hkr-s-where' } );
+		var initials = ( this.cfg.user || '?' ).trim().charAt( 0 ).toUpperCase();
 		var head = el( 'header', { class: 'hkr-s-head' }, [
-			el( 'div', { class: 'hkr-s-head__brand' }, [
-				this.cfg.logo ? el( 'img', { class: 'hkr-s-logo', src: this.cfg.logo, alt: this.cfg.business || '', onerror: function () {
-					this.remove();
-				} } ) : null,
-				el( 'div', {}, [ el( 'h1', { class: 'hkr-s-title' }, [ 'Bookings ', this.badge ] ), el( 'p', { class: 'hkr-s-user', text: this.cfg.user } ) ] )
-			] ),
-			el( 'div', { class: 'hkr-s-head__actions' }, [
-				this.soundBtn,
-				this.cfg.canEdit ? el( 'button', { type: 'button', class: 'hkr-s-btn', onclick: function () {
-					self.editDialog( null );
-				} }, [ '+ Add booking' ] ) : null,
-				this.cfg.adminUrl ? el( 'a', { class: 'hkr-s-btn hkr-s-btn--ghost', href: this.cfg.adminUrl }, [ 'Admin' ] ) : null,
-				el( 'a', { class: 'hkr-s-btn hkr-s-btn--ghost', href: this.cfg.logoutUrl }, [ 'Log out' ] )
+			el( 'div', { class: 'hkr-s-head__in' }, [
+				el( 'div', { class: 'hkr-s-brand' }, [
+					this.cfg.logo ? el( 'img', { class: 'hkr-s-logo', src: this.cfg.logo, alt: this.cfg.business || '', onerror: function () {
+						this.remove();
+					} } ) : null,
+					el( 'span', { class: 'hkr-s-brand__sep', 'aria-hidden': 'true' } ),
+					el( 'div', { class: 'hkr-s-brand__text' }, [
+						el( 'h1', { class: 'hkr-s-title' }, [ 'Bookings', this.badge ] ),
+						this.where
+					] )
+				] ),
+				el( 'div', { class: 'hkr-s-head__actions' }, [
+					this.soundBtn,
+					this.cfg.adminUrl ? el( 'a', { class: 'hkr-s-btn hkr-s-btn--quiet hkr-s-hide-sm', href: this.cfg.adminUrl }, [ icon( 'grid' ), el( 'span', { text: 'Admin' } ) ] ) : null,
+					this.cfg.canEdit ? btn( 'Add booking', 'plus', 'hkr-s-btn--primary', function () {
+						self.editDialog( null );
+					} ) : null,
+					el( 'div', { class: 'hkr-s-user' }, [
+						el( 'span', { class: 'hkr-s-avatar', 'aria-hidden': 'true', text: initials } ),
+						el( 'span', { class: 'hkr-s-user__name hkr-s-hide-sm', text: this.cfg.user } ),
+						el( 'a', { class: 'hkr-s-btn hkr-s-btn--quiet hkr-s-btn--icon', href: this.cfg.logoutUrl, title: 'Log out', 'aria-label': 'Log out' }, [ icon( 'logout' ) ] )
+					] )
+				] )
 			] )
 		] );
 
-		this.locSelect = el( 'select', { class: 'hkr-s-input', 'aria-label': 'Location', onchange: function () {
-			self.state.location = parseInt( this.value, 10 ) || 0;
+		/* Stat tiles – each one is also a shortcut. */
+		this.tiles = {};
+		var tile = function ( key, label, iconName, onClick ) {
+			var value = el( 'strong', { class: 'hkr-s-tile__value', text: '–' } );
+			var sub = el( 'span', { class: 'hkr-s-tile__sub', text: '' } );
+			var node = el( 'button', { type: 'button', class: 'hkr-s-tile hkr-s-tile--' + key, onclick: onClick }, [
+				el( 'span', { class: 'hkr-s-tile__icon' }, [ icon( iconName ) ] ),
+				el( 'span', { class: 'hkr-s-tile__body' }, [ el( 'span', { class: 'hkr-s-tile__label', text: label } ), value, sub ] )
+			] );
+			self.tiles[ key ] = { node: node, value: value, sub: sub };
+			return node;
+		};
+		var tiles = el( 'section', { class: 'hkr-s-tiles', 'aria-label': 'Overview' }, [
+			tile( 'pending', 'Needs confirming', 'alert', function () {
+				self.state.view = 'upcoming';
+				self.setStatus( 'pending' );
+			} ),
+			tile( 'today', 'Today', 'clock', function () {
+				self.state.status = '';
+				self.syncChips();
+				self.showDay( self.today );
+			} ),
+			tile( 'week', 'Next 7 days', 'calendar', function () {
+				self.state.view = 'upcoming';
+				self.setStatus( '' );
+			} )
+		] );
+
+		/* Toolbar */
+		this.locSeg = el( 'div', { class: 'hkr-s-seg hkr-s-seg--loc', role: 'group', 'aria-label': 'Location', hidden: true } );
+		this.upcomingBtn = el( 'button', { type: 'button', class: 'hkr-s-seg__btn', onclick: function () {
+			self.state.view = 'upcoming';
 			self.load();
-		} } );
-		this.dateInput = el( 'input', { type: 'date', class: 'hkr-s-input', 'aria-label': 'Date', onchange: function () {
+		} }, [ 'Upcoming' ] );
+		this.todayBtn = el( 'button', { type: 'button', class: 'hkr-s-seg__btn', onclick: function () {
+			self.showDay( self.today || '' );
+		} }, [ 'Today' ] );
+		this.dateInput = el( 'input', { type: 'date', class: 'hkr-s-date__input', 'aria-label': 'Pick a date', onchange: function () {
 			if ( this.value ) {
 				self.showDay( this.value );
 			}
 		} } );
-		var statusOpts = [ [ '', 'All statuses' ] ];
-		Object.keys( this.cfg.statuses ).forEach( function ( k ) {
-			statusOpts.push( [ k, self.cfg.statuses[ k ] ] );
-		} );
-		this.statusSelect = el( 'select', { class: 'hkr-s-input', 'aria-label': 'Status', onchange: function () {
-			self.state.status = this.value;
-			self.load();
-		} }, statusOpts.map( function ( o ) {
-			return el( 'option', { value: o[ 0 ], text: o[ 1 ] } );
-		} ) );
+		var dateNav = el( 'div', { class: 'hkr-s-date' }, [
+			btn( 'Previous day', 'left', 'hkr-s-btn--quiet', function () {
+				self.showDay( shiftDate( self.state.date || self.today, -1 ) );
+			}, true ),
+			el( 'label', { class: 'hkr-s-date__pick' }, [ icon( 'calendar' ), this.dateInput ] ),
+			btn( 'Next day', 'right', 'hkr-s-btn--quiet', function () {
+				self.showDay( shiftDate( self.state.date || self.today, 1 ) );
+			}, true )
+		] );
 		var searchTimer;
-		this.searchInput = el( 'input', { type: 'search', class: 'hkr-s-input', placeholder: 'Search name, phone, ref', 'aria-label': 'Search', oninput: function () {
+		this.searchInput = el( 'input', { type: 'search', class: 'hkr-s-search__input', placeholder: 'Search name, phone or HK-ref', 'aria-label': 'Search bookings', oninput: function () {
 			var v = this.value;
 			clearTimeout( searchTimer );
 			searchTimer = setTimeout( function () {
@@ -148,33 +274,56 @@
 				self.load();
 			}, 350 );
 		} } );
-		var controls = el( 'div', { class: 'hkr-s-controls' }, [
-			this.locSelect,
-			el( 'div', { class: 'hkr-s-datenav' }, [
-				this.upcomingBtn = el( 'button', { type: 'button', class: 'hkr-s-btn hkr-s-btn--ghost', onclick: function () {
-					self.state.view = 'upcoming';
-					self.load();
-				} }, [ 'Upcoming' ] ),
-				el( 'button', { type: 'button', class: 'hkr-s-btn hkr-s-btn--ghost', 'aria-label': 'Previous day', onclick: function () {
-					self.showDay( shiftDate( self.state.date || self.today, -1 ) );
-				} }, [ '‹' ] ),
-				this.todayBtn = el( 'button', { type: 'button', class: 'hkr-s-btn hkr-s-btn--ghost', onclick: function () {
-					self.showDay( self.today || '' );
-				} }, [ 'Today' ] ),
-				el( 'button', { type: 'button', class: 'hkr-s-btn hkr-s-btn--ghost', 'aria-label': 'Next day', onclick: function () {
-					self.showDay( shiftDate( self.state.date || self.today, 1 ) );
-				} }, [ '›' ] ),
-				this.dateInput
+		this.statusChips = el( 'div', { class: 'hkr-s-chips', role: 'group', 'aria-label': 'Filter by status' } );
+		[ [ '', 'All' ] ].concat( STATUS_ORDER.map( function ( k ) {
+			return [ k, self.cfg.statuses[ k ] || k ];
+		} ) ).forEach( function ( o ) {
+			self.statusChips.appendChild( el( 'button', { type: 'button', class: 'hkr-s-chip' + ( o[ 0 ] ? ' hkr-s-chip--' + o[ 0 ] : '' ), 'data-status': o[ 0 ], 'aria-pressed': 'false', onclick: function () {
+				self.setStatus( o[ 0 ] );
+			} }, [ o[ 0 ] ? el( 'span', { class: 'hkr-s-dot', 'aria-hidden': 'true' } ) : null, o[ 1 ] ] ) );
+		} );
+		var toolbar = el( 'section', { class: 'hkr-s-toolbar', 'aria-label': 'Filters' }, [
+			el( 'div', { class: 'hkr-s-toolbar__row' }, [
+				el( 'div', { class: 'hkr-s-seg', role: 'group', 'aria-label': 'View' }, [ this.upcomingBtn, this.todayBtn ] ),
+				dateNav,
+				this.locSeg,
+				el( 'label', { class: 'hkr-s-search' }, [ icon( 'search' ), this.searchInput ] )
 			] ),
-			this.statusSelect,
-			this.searchInput
+			this.statusChips
 		] );
+
 		this.summary = el( 'div', { class: 'hkr-s-summary', 'aria-live': 'polite' } );
 		this.list = el( 'div', { class: 'hkr-s-list' } );
+		this.list.appendChild( this.skeleton() );
 		this.toasts = el( 'div', { class: 'hkr-s-toasts', 'aria-live': 'assertive' } );
 		this.dialog = el( 'dialog', { class: 'hkr-s-dialog' } );
-		[ head, controls, this.summary, this.list, this.toasts, this.dialog ].forEach( function ( n ) {
+		var main = el( 'main', { class: 'hkr-s-main' }, [ tiles, toolbar, this.summary, this.list ] );
+		[ head, main, this.toasts, this.dialog ].forEach( function ( n ) {
 			self.root.appendChild( n );
+		} );
+		this.syncChips();
+	};
+
+	Staff.prototype.skeleton = function () {
+		var wrap = el( 'div', { class: 'hkr-s-skeleton', 'aria-hidden': 'true' } );
+		for ( var i = 0; i < 3; i++ ) {
+			wrap.appendChild( el( 'div', { class: 'hkr-s-skeleton__row' } ) );
+		}
+		return wrap;
+	};
+
+	Staff.prototype.setStatus = function ( status ) {
+		this.state.status = status;
+		this.syncChips();
+		return this.load();
+	};
+
+	Staff.prototype.syncChips = function () {
+		var current = this.state.status;
+		Array.prototype.forEach.call( this.statusChips.children, function ( c ) {
+			var on = c.getAttribute( 'data-status' ) === current;
+			c.classList.toggle( 'is-active', on );
+			c.setAttribute( 'aria-pressed', on ? 'true' : 'false' );
 		} );
 	};
 
@@ -185,9 +334,12 @@
 	};
 
 	Staff.prototype.updateSoundBtn = function () {
-		this.soundBtn.textContent = this.sound ? 'Sound alerts: on' : 'Sound alerts: off';
+		this.soundBtn.innerHTML = '';
+		this.soundBtn.appendChild( icon( this.sound ? 'bell' : 'bellOff' ) );
+		this.soundBtn.appendChild( el( 'span', { class: 'hkr-s-sound__label', text: this.sound ? 'Alerts on' : 'Alerts off' } ) );
 		this.soundBtn.classList.toggle( 'is-on', this.sound );
 		this.soundBtn.setAttribute( 'aria-pressed', this.sound ? 'true' : 'false' );
+		this.soundBtn.title = this.sound ? 'Sound alerts are on. Click to mute.' : 'Turn on a sound when a new booking arrives.';
 	};
 
 	Staff.prototype.beep = function () {
@@ -211,7 +363,7 @@
 	};
 
 	Staff.prototype.toast = function ( text, warn, onClick ) {
-		var t = el( 'div', { class: 'hkr-s-toast' + ( warn ? ' hkr-s-toast--warn' : '' ), role: 'status' }, [ text ] );
+		var t = el( 'div', { class: 'hkr-s-toast' + ( warn ? ' hkr-s-toast--warn' : '' ), role: 'status' }, [ icon( warn ? 'alert' : 'check' ), el( 'span', { text: text } ) ] );
 		if ( onClick ) {
 			t.classList.add( 'is-clickable' );
 			t.addEventListener( 'click', onClick );
@@ -221,15 +373,20 @@
 			t.classList.add( 'is-leaving' );
 			setTimeout( function () {
 				t.remove();
-			}, 400 );
+			}, 300 );
 		}, 8000 );
 	};
 
 	Staff.prototype.setPending = function ( n ) {
 		this.state.pending = n;
 		this.badge.hidden = ! n;
-		this.badge.textContent = n + ' pending';
+		this.badge.textContent = n + ' to confirm';
 		document.title = ( n ? '(' + n + ') ' : '' ) + document.title.replace( /^\(\d+\)\s/, '' );
+		if ( this.tiles ) {
+			this.tiles.pending.value.textContent = String( n );
+			this.tiles.pending.sub.textContent = n ? 'Tap to see them' : 'All caught up';
+			this.tiles.pending.node.classList.toggle( 'is-alert', n > 0 );
+		}
 	};
 
 	Staff.prototype.load = function () {
@@ -237,7 +394,11 @@
 		var s = this.state;
 		var q = '?view=' + s.view + '&date=' + encodeURIComponent( s.date ) + '&location=' + s.location + '&status=' + encodeURIComponent( s.status ) + '&search=' + encodeURIComponent( s.search );
 		this.list.setAttribute( 'aria-busy', 'true' );
+		var ticket = ( this.ticket = ( this.ticket || 0 ) + 1 );
 		return this.api( '/staff/bookings' + q ).then( function ( data ) {
+			if ( ticket !== self.ticket ) {
+				return; // A newer request is on its way.
+			}
 			self.list.setAttribute( 'aria-busy', 'false' );
 			self.today = data.today;
 			if ( s.view === 'day' ) {
@@ -250,58 +411,97 @@
 			self.todayBtn.classList.toggle( 'is-active', s.view === 'day' && s.date === data.today && ! s.search );
 			s.latestId = Math.max( s.latestId, data.latestId || 0 );
 			self.locations = data.locations || [];
+			self.names = shortNames( self.locations );
 			self.fillLocations();
 			self.setPending( data.pending );
-			var label = s.search ? 'Search results' : ( s.view === 'upcoming' ? 'All upcoming bookings' : data.dateLabel + ( data.date === data.today ? ' (today)' : '' ) );
+			if ( data.stats ) {
+				self.tiles.today.value.textContent = plural( data.stats.today.bookings, 'booking', 'bookings' );
+				self.tiles.today.sub.textContent = plural( data.stats.today.guests, 'guest', 'guests' );
+				self.tiles.week.value.textContent = plural( data.stats.week.bookings, 'booking', 'bookings' );
+				self.tiles.week.sub.textContent = plural( data.stats.week.guests, 'guest', 'guests' );
+			}
+			var title = s.search ? 'Search results' : ( s.view === 'upcoming' ? 'Upcoming' : data.dateLabel + ( data.date === data.today ? ' · Today' : '' ) );
+			if ( s.status ) {
+				title += ' · ' + ( self.cfg.statuses[ s.status ] || s.status );
+			}
 			self.summary.innerHTML = '';
-			self.summary.appendChild( el( 'strong', { text: label } ) );
-			self.summary.appendChild( document.createTextNode( ' · ' + data.bookings.length + ' booking' + ( data.bookings.length === 1 ? '' : 's' ) + ' · ' + data.covers + ' guests' ) );
+			self.summary.appendChild( el( 'h2', { class: 'hkr-s-summary__title', text: title } ) );
+			self.summary.appendChild( el( 'span', { class: 'hkr-s-summary__meta', text: plural( data.bookings.length, 'booking', 'bookings' ) + ' · ' + plural( data.covers, 'guest', 'guests' ) } ) );
 			self.renderList( data.bookings );
 		} ).catch( function ( e ) {
+			if ( ticket !== self.ticket ) {
+				return;
+			}
+			self.list.setAttribute( 'aria-busy', 'false' );
 			self.list.innerHTML = '';
-			self.list.appendChild( el( 'p', { class: 'hkr-s-error', text: e.message } ) );
+			self.list.appendChild( el( 'p', { class: 'hkr-s-error', role: 'alert' }, [ icon( 'alert' ), el( 'span', { text: e.message } ) ] ) );
 		} );
 	};
 
 	Staff.prototype.fillLocations = function () {
 		var self = this;
-		var current = String( this.state.location );
-		this.locSelect.innerHTML = '';
-		if ( this.locations.length > 1 ) {
-			this.locSelect.appendChild( el( 'option', { value: '0', text: 'All my locations' } ) );
+		var many = this.locations.length > 1;
+		this.locSeg.hidden = ! many;
+		this.where.textContent = many ? ( this.state.location ? this.names[ this.state.location ] : 'All locations' ) : ( this.locations[ 0 ] ? this.locations[ 0 ].name : '' );
+		if ( ! many ) {
+			return;
 		}
-		this.locations.forEach( function ( l ) {
-			var o = el( 'option', { value: String( l.id ), text: l.name } );
-			if ( String( l.id ) === current ) {
-				o.selected = true;
-			}
-			self.locSelect.appendChild( o );
+		this.locSeg.innerHTML = '';
+		[ { id: 0, label: 'All' } ].concat( this.locations.map( function ( l ) {
+			return { id: l.id, label: self.names[ l.id ] };
+		} ) ).forEach( function ( o ) {
+			var on = self.state.location === o.id;
+			self.locSeg.appendChild( el( 'button', { type: 'button', class: 'hkr-s-seg__btn' + ( on ? ' is-active' : '' ), 'aria-pressed': on ? 'true' : 'false', onclick: function () {
+				if ( self.state.location !== o.id ) {
+					self.state.location = o.id;
+					self.load();
+				}
+			} }, [ o.id ? el( 'span', { class: 'hkr-s-locdot hkr-s-locdot--' + self.locIndex( o.id ), 'aria-hidden': 'true' } ) : null, o.label ] ) );
 		} );
-		this.locSelect.hidden = this.locations.length < 2;
+	};
+
+	Staff.prototype.locIndex = function ( id ) {
+		for ( var i = 0; i < this.locations.length; i++ ) {
+			if ( this.locations[ i ].id === id ) {
+				return i % 4;
+			}
+		}
+		return 0;
 	};
 
 	Staff.prototype.renderList = function ( bookings ) {
 		var self = this;
 		this.list.innerHTML = '';
 		if ( ! bookings.length ) {
-			this.list.appendChild( el( 'p', { class: 'hkr-s-empty', text: this.state.view === 'upcoming' && ! this.state.search ? 'No upcoming bookings.' : 'No bookings.' } ) );
+			var msg = this.state.search ? 'No bookings match your search.' : ( this.state.status ? 'Nothing here with this status.' : ( this.state.view === 'upcoming' ? 'No upcoming bookings yet.' : 'No bookings on this day.' ) );
+			this.list.appendChild( el( 'div', { class: 'hkr-s-empty' }, [ icon( 'inbox' ), el( 'p', { text: msg } ) ] ) );
 			return;
 		}
-		var lastGroup = '';
-		var lastDay = '';
-		var multiDate = this.state.search || this.state.view === 'upcoming';
+		// Group by day, with a running count of bookings and guests for each day.
+		var groups = [];
 		bookings.forEach( function ( b ) {
-			if ( multiDate && b.date !== lastDay ) {
-				self.list.appendChild( el( 'h2', { class: 'hkr-s-day', text: b.dateLabel + ( b.date === self.today ? ' (today)' : '' ) } ) );
-				lastDay = b.date;
-				lastGroup = '';
+			var g = groups[ groups.length - 1 ];
+			if ( ! g || g.date !== b.date ) {
+				g = { date: b.date, label: b.dateLabel, items: [], guests: 0 };
+				groups.push( g );
 			}
-			var group = b.timeLabel;
-			if ( group !== lastGroup ) {
-				self.list.appendChild( el( 'h3', { class: 'hkr-s-time', text: group } ) );
-				lastGroup = group;
+			g.items.push( b );
+			if ( [ 'cancelled', 'declined', 'no_show' ].indexOf( b.status ) < 0 ) {
+				g.guests += b.party;
 			}
-			self.list.appendChild( self.card( b ) );
+		} );
+		groups.forEach( function ( g ) {
+			var section = el( 'section', { class: 'hkr-s-day' } );
+			section.appendChild( el( 'header', { class: 'hkr-s-day__head' }, [
+				el( 'h3', { class: 'hkr-s-day__title' }, [ g.label, g.date === self.today ? el( 'span', { class: 'hkr-s-today', text: 'Today' } ) : null ] ),
+				el( 'span', { class: 'hkr-s-day__meta', text: plural( g.items.length, 'booking', 'bookings' ) + ' · ' + plural( g.guests, 'guest', 'guests' ) } )
+			] ) );
+			var rows = el( 'div', { class: 'hkr-s-rows' } );
+			g.items.forEach( function ( b ) {
+				rows.appendChild( self.card( b ) );
+			} );
+			section.appendChild( rows );
+			self.list.appendChild( section );
 		} );
 		if ( this.highlight ) {
 			var target = this.list.querySelector( '[data-id="' + this.highlight + '"]' );
@@ -316,116 +516,135 @@
 	Staff.prototype.card = function ( b ) {
 		var self = this;
 		var open = !! this.state.open[ b.id ];
+		var t = splitTime( b.timeLabel );
+
+		var meta = el( 'div', { class: 'hkr-s-meta' }, [
+			el( 'span', { class: 'hkr-s-meta__item hkr-s-meta__party' }, [ icon( 'users' ), plural( b.party, 'guest', 'guests' ) ] ),
+			b.area ? el( 'span', { class: 'hkr-s-meta__item' }, [ icon( 'chair' ), b.area ] ) : null,
+			this.locations.length > 1 ? el( 'span', { class: 'hkr-s-meta__item' }, [ el( 'span', { class: 'hkr-s-locdot hkr-s-locdot--' + this.locIndex( b.locationId ), 'aria-hidden': 'true' } ), this.names[ b.locationId ] || b.location ] ) : null,
+			b.phone ? el( 'a', { class: 'hkr-s-meta__item hkr-s-phone', href: 'tel:' + b.phone }, [ icon( 'phone' ), b.phoneDisplay ] ) : null,
+			el( 'span', { class: 'hkr-s-meta__item hkr-s-ref', text: b.ref } )
+		] );
+
 		var flags = [];
 		if ( b.celebration ) {
-			flags.push( el( 'span', { class: 'hkr-s-flag hkr-s-flag--party', text: '🎉 ' + b.celebration } ) );
+			flags.push( el( 'span', { class: 'hkr-s-flag hkr-s-flag--party' }, [ icon( 'gift' ), b.celebration ] ) );
 		}
 		if ( b.dietary ) {
-			flags.push( el( 'span', { class: 'hkr-s-flag hkr-s-flag--warn', text: 'Allergy / dietary' } ) );
+			flags.push( el( 'span', { class: 'hkr-s-flag hkr-s-flag--warn', title: b.dietary }, [ icon( 'alert' ), 'Allergy / dietary' ] ) );
 		}
 		if ( b.highChair ) {
-			flags.push( el( 'span', { class: 'hkr-s-flag', text: 'High chair' } ) );
+			flags.push( el( 'span', { class: 'hkr-s-flag' }, [ icon( 'info' ), 'High chair' ] ) );
 		}
 		if ( b.largeParty ) {
-			flags.push( el( 'span', { class: 'hkr-s-flag hkr-s-flag--warn', text: 'Large party' } ) );
+			flags.push( el( 'span', { class: 'hkr-s-flag hkr-s-flag--warn' }, [ icon( 'users' ), 'Large party' ] ) );
 		}
+		if ( b.requests ) {
+			flags.push( el( 'span', { class: 'hkr-s-flag', title: b.requests }, [ icon( 'note' ), 'Special request' ] ) );
+		}
+
+		// Main actions stay visible; the rest live in the details panel.
 		var actions = el( 'div', { class: 'hkr-s-actions' } );
+		var more = el( 'div', { class: 'hkr-s-actions hkr-s-actions--more' } );
 		if ( this.cfg.canEdit ) {
-			var add = function ( label, cls, fn ) {
-				actions.appendChild( el( 'button', { type: 'button', class: 'hkr-s-btn ' + ( cls || '' ), onclick: fn }, [ label ] ) );
-			};
 			if ( b.status === 'pending' ) {
-				add( '✓ Confirm', 'hkr-s-btn--ok', function () {
-					self.setStatus( b, 'confirmed', '', true );
-				} );
-				add( 'Decline / suggest time', 'hkr-s-btn--ghost', function () {
+				actions.appendChild( btn( 'Confirm', 'check', 'hkr-s-btn--ok', function () {
+					self.changeStatus( b, 'confirmed', '', true, this );
+				} ) );
+				actions.appendChild( btn( 'Decline', 'x', 'hkr-s-btn--ghost', function () {
 					self.messageDialog( b, 'declined', 'Decline booking', 'Message to the guest (e.g. suggest another time)' );
-				} );
+				} ) );
 			}
 			if ( b.status === 'confirmed' ) {
-				add( 'Seated', '', function () {
-					self.setStatus( b, 'seated', '', false );
-				} );
-				add( 'No-show', 'hkr-s-btn--ghost', function () {
-					self.setStatus( b, 'no_show', '', false );
-				} );
+				actions.appendChild( btn( 'Seated', 'chair', 'hkr-s-btn--info', function () {
+					self.changeStatus( b, 'seated', '', false, this );
+				} ) );
+				actions.appendChild( btn( 'No-show', 'userX', 'hkr-s-btn--ghost', function () {
+					self.changeStatus( b, 'no_show', '', false, this );
+				} ) );
 			}
 			if ( b.status === 'seated' ) {
-				add( 'Completed', '', function () {
-					self.setStatus( b, 'completed', '', false );
-				} );
-			}
-			if ( b.status === 'pending' || b.status === 'confirmed' ) {
-				add( 'Cancel', 'hkr-s-btn--ghost', function () {
-					self.messageDialog( b, 'cancelled', 'Cancel booking', 'Message to the guest (optional)' );
-				} );
+				actions.appendChild( btn( 'Completed', 'check', 'hkr-s-btn--ghost', function () {
+					self.changeStatus( b, 'completed', '', false, this );
+				} ) );
 			}
 			if ( b.status === 'cancelled' || b.status === 'declined' || b.status === 'no_show' ) {
-				add( 'Re-open', 'hkr-s-btn--ghost', function () {
-					self.setStatus( b, 'pending', '', false );
-				} );
+				actions.appendChild( btn( 'Re-open', 'undo', 'hkr-s-btn--ghost', function () {
+					self.changeStatus( b, 'pending', '', false, this );
+				} ) );
 			}
-			add( 'Edit', 'hkr-s-btn--ghost', function () {
+			more.appendChild( btn( 'Edit booking', 'pencil', 'hkr-s-btn--ghost', function () {
 				self.editDialog( b );
-			} );
-			add( 'Note', 'hkr-s-btn--ghost', function () {
+			} ) );
+			more.appendChild( btn( 'Add note', 'note', 'hkr-s-btn--ghost', function () {
 				self.noteDialog( b );
-			} );
+			} ) );
+			if ( b.status === 'pending' || b.status === 'confirmed' ) {
+				more.appendChild( btn( 'Cancel booking', 'x', 'hkr-s-btn--danger', function () {
+					self.messageDialog( b, 'cancelled', 'Cancel booking', 'Message to the guest (optional)' );
+				} ) );
+			}
 		}
-		var details = el( 'dl', { class: 'hkr-s-details', hidden: ! open } );
-		var rows = [
-			[ 'Reference', b.ref ],
-			[ 'Location', b.location ],
+
+		var details = el( 'div', { class: 'hkr-s-details', id: 'hkr-d-' + b.id, hidden: ! open } );
+		var dl = el( 'dl', { class: 'hkr-s-dl' } );
+		[
 			[ 'Time', b.timeLabel + ' – ' + b.endLabel ],
+			[ 'Location', b.location ],
 			[ 'Email', b.email ],
-			[ 'Source', this.cfg.sources[ b.source ] || b.source ],
-			[ 'Celebration details', b.celebrationDetails ],
+			[ 'Booked via', this.cfg.sources[ b.source ] || b.source ],
+			[ 'Celebration', b.celebrationDetails ],
 			[ 'Seating', b.seating ],
 			[ 'Dietary / allergies', b.dietary ],
 			[ 'Special requests', b.requests ],
-			[ 'Internal notes', b.internalNotes ]
-		];
-		rows.forEach( function ( r ) {
+			[ 'Staff notes', b.internalNotes ]
+		].forEach( function ( r ) {
 			if ( r[ 1 ] ) {
-				details.appendChild( el( 'dt', { text: r[ 0 ] } ) );
-				details.appendChild( el( 'dd', { text: r[ 1 ] } ) );
+				dl.appendChild( el( 'div', { class: 'hkr-s-dl__row' + ( r[ 0 ] === 'Dietary / allergies' ? ' is-warn' : '' ) }, [ el( 'dt', { text: r[ 0 ] } ), el( 'dd', { text: r[ 1 ] } ) ] ) );
 			}
 		} );
-		var toggle = el( 'button', { type: 'button', class: 'hkr-s-more', 'aria-expanded': open ? 'true' : 'false', onclick: function () {
+		details.appendChild( dl );
+		if ( more.children.length ) {
+			details.appendChild( more );
+		}
+
+		var toggle = el( 'button', { type: 'button', class: 'hkr-s-toggle', 'aria-expanded': open ? 'true' : 'false', 'aria-controls': 'hkr-d-' + b.id, onclick: function () {
 			var now = details.hidden;
 			details.hidden = ! now;
 			this.setAttribute( 'aria-expanded', now ? 'true' : 'false' );
-			this.textContent = now ? 'Hide details' : 'Details';
+			this.querySelector( '.hkr-s-toggle__label' ).textContent = now ? 'Less' : 'Details';
 			self.state.open[ b.id ] = now;
-		} }, [ open ? 'Hide details' : 'Details' ] );
+		} }, [ el( 'span', { class: 'hkr-s-toggle__label', text: open ? 'Less' : 'Details' } ), icon( 'down' ) ] );
 
 		return el( 'article', { class: 'hkr-s-card hkr-s-card--' + b.status, 'data-id': String( b.id ) }, [
-			el( 'div', { class: 'hkr-s-card__main' }, [
-				el( 'div', { class: 'hkr-s-card__who' }, [
-					el( 'strong', { class: 'hkr-s-name', text: b.name } ),
-					el( 'span', { class: 'hkr-s-party', text: b.party + ( b.party === 1 ? ' guest' : ' guests' ) } ),
-					b.area ? el( 'span', { class: 'hkr-s-area', text: b.area } ) : null,
-					this.locations.length > 1 && ! this.state.location ? el( 'span', { class: 'hkr-s-area', text: b.location } ) : null
+			el( 'div', { class: 'hkr-s-card__time' }, [ el( 'strong', { text: t[ 0 ] } ), t[ 1 ] ? el( 'span', { text: t[ 1 ] } ) : null ] ),
+			el( 'div', { class: 'hkr-s-card__body' }, [
+				el( 'div', { class: 'hkr-s-card__top' }, [
+					el( 'h4', { class: 'hkr-s-name', text: b.name } ),
+					el( 'span', { class: 'hkr-s-status hkr-s-status--' + b.status }, [ el( 'span', { class: 'hkr-s-dot', 'aria-hidden': 'true' } ), b.statusLabel ] )
 				] ),
-				el( 'span', { class: 'hkr-s-status hkr-s-status--' + b.status, text: b.statusLabel } )
+				meta,
+				flags.length ? el( 'div', { class: 'hkr-s-flags' }, flags ) : null,
+				details
 			] ),
-			el( 'div', { class: 'hkr-s-card__contact' }, [
-				b.phone ? el( 'a', { class: 'hkr-s-phone', href: 'tel:' + b.phone, text: '📞 ' + b.phoneDisplay } ) : null,
-				el( 'span', { class: 'hkr-s-ref', text: b.ref } )
-			] ),
-			flags.length ? el( 'div', { class: 'hkr-s-flags' }, flags ) : null,
-			actions,
-			toggle,
-			details
+			el( 'div', { class: 'hkr-s-card__side' }, [ actions, toggle ] )
 		] );
 	};
 
-	Staff.prototype.setStatus = function ( b, status, message, notify ) {
+	Staff.prototype.changeStatus = function ( b, status, message, notify, button ) {
 		var self = this;
+		if ( button ) {
+			button.disabled = true;
+			button.classList.add( 'is-busy' );
+		}
 		return this.api( '/staff/bookings/' + b.id + '/status', { method: 'POST', body: { status: status, message: message, notify: notify } } ).then( function () {
 			self.toast( b.name + ': ' + ( self.cfg.statuses[ status ] || status ) + ( notify ? ' · guest emailed' : '' ) );
 			return self.load();
 		} ).catch( function ( e ) {
+			if ( button ) {
+				button.disabled = false;
+				button.classList.remove( 'is-busy' );
+			}
 			self.toast( e.message, true );
 		} );
 	};
@@ -435,12 +654,17 @@
 		var d = this.dialog;
 		d.innerHTML = '';
 		var err = el( 'p', { class: 'hkr-s-error', role: 'alert', hidden: true } );
-		var save = el( 'button', { type: 'submit', class: 'hkr-s-btn' }, [ saveLabel || 'Save' ] );
+		var save = el( 'button', { type: 'submit', class: 'hkr-s-btn hkr-s-btn--primary' }, [ saveLabel || 'Save' ] );
 		var form = el( 'form', { method: 'dialog', class: 'hkr-s-form' }, [
-			el( 'h2', { text: title } ),
+			el( 'div', { class: 'hkr-s-form__head' }, [
+				el( 'h2', { text: title } ),
+				btn( 'Close', 'x', 'hkr-s-btn--quiet', function () {
+					d.close();
+				}, true )
+			] ),
 			body,
 			err,
-			el( 'div', { class: 'hkr-s-actions' }, [
+			el( 'div', { class: 'hkr-s-actions hkr-s-form__foot' }, [
 				save,
 				el( 'button', { type: 'button', class: 'hkr-s-btn hkr-s-btn--ghost', onclick: function () {
 					d.close();
@@ -662,7 +886,7 @@
 								self.state.view = 'day';
 								self.state.date = b.date;
 								self.state.status = '';
-								self.statusSelect.value = '';
+								self.syncChips();
 								self.highlight = b.id;
 								self.state.open[ b.id ] = true;
 								self.load();

@@ -449,10 +449,41 @@ class HKR_Rest {
 				'bookings'  => array_map( array( __CLASS__, 'staff_booking' ), $result['items'] ),
 				'covers'    => $covers,
 				'pending'   => $pending['total'],
+				'stats'     => self::staff_stats( $ids ),
 				'latestId'  => $latest,
 				'locations' => self::staff_locations_payload(),
 			)
 		);
+	}
+
+	/**
+	 * Numbers for the tiles at the top of the staff screen.
+	 */
+	private static function staff_stats( $ids ) {
+		$today  = hkr_now()->format( 'Y-m-d' );
+		$week   = hkr_now()->modify( '+6 days' )->format( 'Y-m-d' );
+		$active = array_values( array_diff( array_keys( hkr_statuses() ), hkr_released_statuses(), array( 'no_show' ) ) );
+		$out    = array();
+		foreach ( array( 'today' => $today, 'week' => $week ) as $key => $to ) {
+			$res      = HKR_Bookings::query(
+				array(
+					'location_ids' => $ids,
+					'status'       => $active,
+					'date_from'    => $today,
+					'date_to'      => $to,
+					'limit'        => -1,
+				)
+			);
+			$guests = 0;
+			foreach ( $res['items'] as $b ) {
+				$guests += (int) $b['party_size'];
+			}
+			$out[ $key ] = array(
+				'bookings' => count( $res['items'] ),
+				'guests'   => $guests,
+			);
+		}
+		return $out;
 	}
 
 	private static function latest_id( $ids ) {
