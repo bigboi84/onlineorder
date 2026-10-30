@@ -6,7 +6,7 @@ Built to replace MotoPress Appointment Booking. Full spec: `../haka-website-plan
 ## What it does
 
 - **Booking form** `[hakka_booking]`:
-  - The guest first picks a location. The location's photo and a Port of Spain / Brentwood switcher then appear, and the photo fades when they switch.
+  - The guest first picks a location, and that location's photo then appears. Every step has a Back button; Back on the first step returns to the choice of location.
   - Next they choose the booking type, number of guests, date, time and their details (including "Are you celebrating something?"). Only times with room are offered.
   - Required fields are marked with *. If anything is missing, the form lists exactly which fields to fix.
   - A pop-up shows the booking details and reference as soon as it is sent.

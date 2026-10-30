@@ -137,38 +137,11 @@
 
 		this.heroImgs = [ el( 'img', { class: 'hkr-hero__img is-active', alt: '', loading: 'lazy', decoding: 'async' } ), el( 'img', { class: 'hkr-hero__img', alt: '', loading: 'lazy', decoding: 'async' } ) ];
 		this.heroInfo = el( 'div', { class: 'hkr-hero__info', 'aria-live': 'polite' } );
-		var tabs = null;
-		if ( this.cfg.locations.length > 1 ) {
-			tabs = el( 'div', { class: 'hkr-tabs', role: 'group', 'aria-label': this.t.chooseLocation } );
-			// Short tab labels when every location shares a first word ("HAKKA Port of Spain" → "Port of Spain").
-			var firstWords = this.cfg.locations.map( function ( l ) {
-				return l.name.split( ' ' )[ 0 ];
-			} );
-			var shared = firstWords.every( function ( w ) {
-				return w === firstWords[ 0 ];
-			} ) && this.cfg.locations.every( function ( l ) {
-				return l.name.indexOf( ' ' ) > 0;
-			} );
-			this.cfg.locations.forEach( function ( l ) {
-				tabs.appendChild( el( 'button', {
-					type: 'button',
-					class: 'hkr-tab',
-					'data-id': l.id,
-					'aria-pressed': 'false',
-					'aria-label': l.name,
-					onclick: function () {
-						if ( ! self.state.loc || self.state.loc.id !== l.id ) {
-							self.selectLocation( l );
-						}
-					}
-				}, [ shared ? l.name.slice( l.name.indexOf( ' ' ) + 1 ) : l.name ] ) );
-			} );
-		}
-		// The photo and switcher stay hidden until the guest has chosen a location.
+		// The photo stays hidden until the guest has chosen a location.
 		this.hero = el( 'div', { class: 'hkr-hero', hidden: true }, [
 			el( 'div', { class: 'hkr-hero__media' }, this.heroImgs ),
 			el( 'div', { class: 'hkr-hero__shade' } ),
-			el( 'div', { class: 'hkr-hero__content' }, [ tabs, this.heroInfo ] )
+			el( 'div', { class: 'hkr-hero__content' }, [ this.heroInfo ] )
 		] );
 		this.chips = el( 'div', { class: 'hkr-chips', 'aria-live': 'polite' } );
 		this.body = el( 'div', { class: 'hkr-body' } );
@@ -181,6 +154,25 @@
 		} else {
 			this.root.classList.add( 'hkr-booking--picking' );
 			this.view_location();
+		}
+	};
+
+	/** Back from the first step: hide the photo and show the location choice again. */
+	Booking.prototype.backToLocations = function () {
+		this.state.loc = null;
+		this.state.area = null;
+		this.state.date = '';
+		this.state.time = '';
+		this.step = 'location';
+		this.hero.hidden = true;
+		this.root.classList.add( 'hkr-booking--picking' );
+		this.view_location();
+		var h = this.body.querySelector( '.hkr-title' );
+		if ( h ) {
+			h.focus( { preventScroll: true } );
+		}
+		if ( this.root.getBoundingClientRect().top < 0 ) {
+			window.scrollTo( { top: this.root.getBoundingClientRect().top + window.pageYOffset - 80, behavior: 'smooth' } );
 		}
 	};
 
@@ -242,12 +234,6 @@
 				this.heroInfo.appendChild( n );
 			}, this );
 		}
-		var tabs = this.root.querySelectorAll( '.hkr-tab' );
-		Array.prototype.forEach.call( tabs, function ( tab ) {
-			var on = loc && String( loc.id ) === tab.getAttribute( 'data-id' );
-			tab.setAttribute( 'aria-pressed', on ? 'true' : 'false' );
-			tab.classList.toggle( 'is-active', !! on );
-		} );
 	};
 
 	Booking.prototype.selectLocation = function ( loc, initial ) {
@@ -357,8 +343,14 @@
 		var order = this.order();
 		var i = order.indexOf( step );
 		var self = this;
-		return i > 0 ? function () {
-			self.go( order[ i - 1 ] );
+		if ( i > 0 ) {
+			return function () {
+				self.go( order[ i - 1 ] );
+			};
+		}
+		// First step: back to the choice of location (when there is more than one).
+		return this.cfg.locations.length > 1 ? function () {
+			self.backToLocations();
 		} : null;
 	};
 
@@ -385,7 +377,8 @@
 						self.go( 'party' );
 					}
 				}, [ el( 'strong', { text: a.name } ), a.description ? el( 'span', { text: a.description } ) : null ] );
-			} ) )
+			} ) ),
+			this.nav( this.prevOf( 'type' ), null )
 		] );
 	};
 
