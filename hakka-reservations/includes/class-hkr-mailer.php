@@ -306,7 +306,11 @@ class HKR_Mailer {
 		$dark     = self::color( 'dark' );
 		$business = HKR_Settings::get( 'business_name' );
 		$logo_id  = (int) HKR_Settings::get( 'logo_id' );
-		$logo     = $logo_id ? wp_get_attachment_image_src( $logo_id, 'medium' ) : false;
+		$logo     = $logo_id ? wp_get_attachment_image_src( $logo_id, 'full' ) : false;
+		if ( ! $logo ) {
+			$site_logo = self::site_logo_url();
+			$logo      = $site_logo ? array( $site_logo ) : false;
+		}
 		$hero     = $loc ? HKR_Locations::email_image_url( $loc ) : '';
 
 		$banner_bg = '#fff4e0';
@@ -333,7 +337,7 @@ class HKR_Mailer {
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;<?php echo $font; // phpcs:ignore ?>color:#222222;">
 	<tr><td style="background:<?php echo esc_attr( $dark ); ?>;padding:20px 28px;border-bottom:4px solid <?php echo esc_attr( $primary ); ?>;">
 		<?php if ( $logo ) : ?>
-			<img src="<?php echo esc_url( $logo[0] ); ?>" alt="<?php echo esc_attr( $business ); ?>" style="max-height:48px;max-width:220px;display:block;border:0;">
+			<img src="<?php echo esc_url( $logo[0] ); ?>" alt="<?php echo esc_attr( $business ); ?>" width="280" style="display:block;width:280px;max-width:100%;height:auto;border:0;">
 		<?php else : ?>
 			<span style="color:#ffffff;font-size:22px;font-weight:bold;letter-spacing:2px;"><?php echo esc_html( strtoupper( $business ) ); ?></span>
 		<?php endif; ?>
@@ -412,6 +416,27 @@ class HKR_Mailer {
 </body></html>
 		<?php
 		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The website's own logo, used when no email logo is chosen in Settings:
+	 * the WordPress site logo, else the Grand Restaurant theme's header logo.
+	 */
+	public static function site_logo_url() {
+		$id = (int) get_theme_mod( 'custom_logo' );
+		if ( $id ) {
+			$src = wp_get_attachment_image_src( $id, 'full' );
+			if ( $src ) {
+				return $src[0];
+			}
+		}
+		foreach ( array( 'tg_retina_logo', 'tg_retina_transparent_logo' ) as $mod ) {
+			$url = (string) get_theme_mod( $mod );
+			if ( $url ) {
+				return set_url_scheme( $url, 'https' );
+			}
+		}
+		return '';
 	}
 
 	/**
