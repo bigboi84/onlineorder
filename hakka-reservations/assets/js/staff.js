@@ -47,7 +47,7 @@
 	function Staff( root ) {
 		this.root = root;
 		this.cfg = JSON.parse( root.getAttribute( 'data-hkr-staff' ) );
-		this.state = { date: this.cfg.openDate || '', location: 0, status: '', search: '', latestId: 0, pending: 0, open: {} };
+		this.state = { view: this.cfg.openDate ? 'day' : 'upcoming', date: this.cfg.openDate || '', location: 0, status: '', search: '', latestId: 0, pending: 0, open: {} };
 		if ( this.cfg.openBooking ) {
 			this.state.open[ this.cfg.openBooking ] = true;
 			this.highlight = this.cfg.openBooking;
@@ -104,7 +104,12 @@
 		} } );
 		this.updateSoundBtn();
 		var head = el( 'header', { class: 'hkr-s-head' }, [
-			el( 'div', {}, [ el( 'h1', { class: 'hkr-s-title' }, [ 'Bookings ', this.badge ] ), el( 'p', { class: 'hkr-s-user', text: this.cfg.user } ) ] ),
+			el( 'div', { class: 'hkr-s-head__brand' }, [
+				this.cfg.logo ? el( 'img', { class: 'hkr-s-logo', src: this.cfg.logo, alt: this.cfg.business || '', onerror: function () {
+					this.remove();
+				} } ) : null,
+				el( 'div', {}, [ el( 'h1', { class: 'hkr-s-title' }, [ 'Bookings ', this.badge ] ), el( 'p', { class: 'hkr-s-user', text: this.cfg.user } ) ] )
+			] ),
 			el( 'div', { class: 'hkr-s-head__actions' }, [
 				this.soundBtn,
 				this.cfg.canEdit ? el( 'button', { type: 'button', class: 'hkr-s-btn', onclick: function () {
@@ -121,11 +126,10 @@
 		} } );
 		this.dateInput = el( 'input', { type: 'date', class: 'hkr-s-input', 'aria-label': 'Date', onchange: function () {
 			if ( this.value ) {
-				self.state.date = this.value;
-				self.load();
+				self.showDay( this.value );
 			}
 		} } );
-		var statusOpts = [ [ '', 'All statuses' ], [ 'upcoming_pending', 'All pending (upcoming)' ] ];
+		var statusOpts = [ [ '', 'All statuses' ] ];
 		Object.keys( this.cfg.statuses ).forEach( function ( k ) {
 			statusOpts.push( [ k, self.cfg.statuses[ k ] ] );
 		} );
@@ -147,17 +151,18 @@
 		var controls = el( 'div', { class: 'hkr-s-controls' }, [
 			this.locSelect,
 			el( 'div', { class: 'hkr-s-datenav' }, [
+				this.upcomingBtn = el( 'button', { type: 'button', class: 'hkr-s-btn hkr-s-btn--ghost', onclick: function () {
+					self.state.view = 'upcoming';
+					self.load();
+				} }, [ 'Upcoming' ] ),
 				el( 'button', { type: 'button', class: 'hkr-s-btn hkr-s-btn--ghost', 'aria-label': 'Previous day', onclick: function () {
-					self.state.date = shiftDate( self.state.date, -1 );
-					self.load();
+					self.showDay( shiftDate( self.state.date || self.today, -1 ) );
 				} }, [ '‹' ] ),
-				el( 'button', { type: 'button', class: 'hkr-s-btn hkr-s-btn--ghost', onclick: function () {
-					self.state.date = '';
-					self.load();
+				this.todayBtn = el( 'button', { type: 'button', class: 'hkr-s-btn hkr-s-btn--ghost', onclick: function () {
+					self.showDay( self.today || '' );
 				} }, [ 'Today' ] ),
 				el( 'button', { type: 'button', class: 'hkr-s-btn hkr-s-btn--ghost', 'aria-label': 'Next day', onclick: function () {
-					self.state.date = shiftDate( self.state.date, 1 );
-					self.load();
+					self.showDay( shiftDate( self.state.date || self.today, 1 ) );
 				} }, [ '›' ] ),
 				this.dateInput
 			] ),
@@ -173,8 +178,15 @@
 		} );
 	};
 
+	Staff.prototype.showDay = function ( date ) {
+		this.state.view = 'day';
+		this.state.date = date;
+		return this.load();
+	};
+
 	Staff.prototype.updateSoundBtn = function () {
-		this.soundBtn.textContent = this.sound ? '🔔 Sound on' : '🔕 Turn on sound';
+		this.soundBtn.textContent = this.sound ? 'Sound alerts: on' : 'Sound alerts: off';
+		this.soundBtn.classList.toggle( 'is-on', this.sound );
 		this.soundBtn.setAttribute( 'aria-pressed', this.sound ? 'true' : 'false' );
 	};
 
@@ -223,18 +235,24 @@
 	Staff.prototype.load = function () {
 		var self = this;
 		var s = this.state;
-		var q = '?date=' + encodeURIComponent( s.date ) + '&location=' + s.location + '&status=' + encodeURIComponent( s.status ) + '&search=' + encodeURIComponent( s.search );
+		var q = '?view=' + s.view + '&date=' + encodeURIComponent( s.date ) + '&location=' + s.location + '&status=' + encodeURIComponent( s.status ) + '&search=' + encodeURIComponent( s.search );
 		this.list.setAttribute( 'aria-busy', 'true' );
 		return this.api( '/staff/bookings' + q ).then( function ( data ) {
 			self.list.setAttribute( 'aria-busy', 'false' );
-			s.date = data.date;
 			self.today = data.today;
-			self.dateInput.value = data.date;
+			if ( s.view === 'day' ) {
+				s.date = data.date;
+				self.dateInput.value = data.date;
+			} else {
+				self.dateInput.value = '';
+			}
+			self.upcomingBtn.classList.toggle( 'is-active', s.view === 'upcoming' && ! s.search );
+			self.todayBtn.classList.toggle( 'is-active', s.view === 'day' && s.date === data.today && ! s.search );
 			s.latestId = Math.max( s.latestId, data.latestId || 0 );
 			self.locations = data.locations || [];
 			self.fillLocations();
 			self.setPending( data.pending );
-			var label = s.search ? 'Search results' : ( s.status === 'upcoming_pending' ? 'All upcoming pending bookings' : data.dateLabel + ( data.date === data.today ? ' (today)' : '' ) );
+			var label = s.search ? 'Search results' : ( s.view === 'upcoming' ? 'All upcoming bookings' : data.dateLabel + ( data.date === data.today ? ' (today)' : '' ) );
 			self.summary.innerHTML = '';
 			self.summary.appendChild( el( 'strong', { text: label } ) );
 			self.summary.appendChild( document.createTextNode( ' · ' + data.bookings.length + ' booking' + ( data.bookings.length === 1 ? '' : 's' ) + ' · ' + data.covers + ' guests' ) );
@@ -266,15 +284,21 @@
 		var self = this;
 		this.list.innerHTML = '';
 		if ( ! bookings.length ) {
-			this.list.appendChild( el( 'p', { class: 'hkr-s-empty', text: 'No bookings.' } ) );
+			this.list.appendChild( el( 'p', { class: 'hkr-s-empty', text: this.state.view === 'upcoming' && ! this.state.search ? 'No upcoming bookings.' : 'No bookings.' } ) );
 			return;
 		}
 		var lastGroup = '';
-		var multiDate = this.state.search || this.state.status === 'upcoming_pending';
+		var lastDay = '';
+		var multiDate = this.state.search || this.state.view === 'upcoming';
 		bookings.forEach( function ( b ) {
-			var group = ( multiDate ? b.dateLabel + ' · ' : '' ) + b.timeLabel;
+			if ( multiDate && b.date !== lastDay ) {
+				self.list.appendChild( el( 'h2', { class: 'hkr-s-day', text: b.dateLabel + ( b.date === self.today ? ' (today)' : '' ) } ) );
+				lastDay = b.date;
+				lastGroup = '';
+			}
+			var group = b.timeLabel;
 			if ( group !== lastGroup ) {
-				self.list.appendChild( el( 'h2', { class: 'hkr-s-time', text: group } ) );
+				self.list.appendChild( el( 'h3', { class: 'hkr-s-time', text: group } ) );
 				lastGroup = group;
 			}
 			self.list.appendChild( self.card( b ) );
@@ -491,7 +515,7 @@
 			locSel.appendChild( o );
 		} );
 		var areaSel = el( 'select', { class: 'hkr-s-input' } );
-		var date = el( 'input', { type: 'date', class: 'hkr-s-input', required: true, value: b ? b.date : this.state.date } );
+		var date = el( 'input', { type: 'date', class: 'hkr-s-input', required: true, value: b ? b.date : ( this.state.view === 'day' && this.state.date ? this.state.date : this.today ) } );
 		var party = el( 'input', { type: 'number', min: '1', max: '500', class: 'hkr-s-input', required: true, value: String( b ? b.party : 2 ) } );
 		var time = el( 'select', { class: 'hkr-s-input', required: true } );
 		var name = el( 'input', { type: 'text', class: 'hkr-s-input', required: true, value: b ? b.name : '' } );
@@ -635,6 +659,7 @@
 						}
 						fresh.forEach( function ( b ) {
 							self.toast( 'New booking: ' + b.name + ' · ' + b.party + ' guests · ' + b.dateLabel + ', ' + b.timeLabel + ' (tap to open)', false, function () {
+								self.state.view = 'day';
 								self.state.date = b.date;
 								self.state.status = '';
 								self.statusSelect.value = '';

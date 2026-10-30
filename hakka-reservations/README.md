@@ -13,8 +13,11 @@ Built to replace MotoPress Appointment Booking. Full spec: `../haka-website-plan
   - The form uses a dark style to match the site, and it protects itself against the theme's button and input styles.
 - **Every booking is confirmed by staff.** The guest is told *"We will call you to confirm your booking."*
 - **Emails routed by location** – the guest email is sent from `booking@hakkarestaurant.com`. The staff alert goes to that location's own address (Port of Spain → `queenstreet@`, Brentwood → `booking@`). Both emails show a clear summary card: date, time, party size, booking type, celebration, allergies.
-- **Staff screen** `[hakka_staff_bookings]` at `/staff-bookings/`:
-  - Each staff member logs in with their own account and sees only their location(s).
+- **Staff screen** at `/staff-bookings/`:
+  - It is a full-screen page of its own, with no website header, footer or theme, just the logo and the bookings. Logged-out visitors see a username and password login card.
+  - It opens on **Upcoming**, which shows every booking from today on, grouped by day. **Today**, ‹ › and the date picker show a single day.
+  - Each staff member logs in with their own account and sees only their location(s). Admins and Reservations Managers see every location, with a location filter.
+  - Locations are assigned under Users → Add New / Edit user → **Booking locations**. The Users list has a "Booking locations" column.
   - Staff can confirm, decline (with a message), seat, mark no-shows, edit, add notes, and add phone or walk-in bookings.
   - A sound and pop-up alert shows when a new booking arrives.
 - **Backend (wp-admin → Reservations)**:

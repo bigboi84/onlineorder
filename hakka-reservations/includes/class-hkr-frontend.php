@@ -14,6 +14,7 @@ class HKR_Frontend {
 		add_shortcode( 'hakka_manage_booking', array( __CLASS__, 'manage_page' ) );
 		add_shortcode( 'hakka_staff_bookings', array( __CLASS__, 'staff_screen' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'register_assets' ) );
+		add_action( 'template_redirect', array( __CLASS__, 'staff_app' ), 5 );
 		add_action( 'template_redirect', array( __CLASS__, 'private_pages' ) );
 		add_filter( 'wp_robots', array( __CLASS__, 'robots' ) );
 		add_filter( 'rank_math/frontend/robots', array( __CLASS__, 'rank_math_robots' ) );
@@ -291,55 +292,161 @@ class HKR_Frontend {
 	}
 
 	/**
-	 * [hakka_staff_bookings] – the staff screen. Requires a login with booking access.
+	 * Settings the staff screen script needs.
+	 */
+	private static function staff_config( $page_url ) {
+		$user = wp_get_current_user();
+		// phpcs:disable WordPress.Security.NonceVerification -- read-only deep-link parameters from the staff alert email.
+		$open_date = isset( $_GET['hkr_date'] ) ? sanitize_text_field( wp_unslash( $_GET['hkr_date'] ) ) : '';
+		$config    = array(
+			'api'          => esc_url_raw( rest_url( HKR_Rest::NS ) ),
+			'nonce'        => wp_create_nonce( 'wp_rest' ),
+			'canEdit'      => current_user_can( 'hkr_edit_bookings' ),
+			'seesAll'      => null === hkr_user_location_ids(),
+			'pollSeconds'  => max( 10, (int) HKR_Settings::get( 'staff_poll_seconds' ) ),
+			'user'         => $user->display_name,
+			'logo'         => self::logo_url(),
+			'business'     => (string) HKR_Settings::get( 'business_name' ),
+			'logoutUrl'    => wp_logout_url( $page_url ),
+			'adminUrl'     => current_user_can( 'hkr_manage' ) ? admin_url( 'admin.php?page=hkr-bookings' ) : '',
+			'statuses'     => hkr_statuses(),
+			'sources'      => hkr_sources(),
+			'celebrations' => HKR_Settings::celebration_options(),
+			'openBooking'  => isset( $_GET['hkr_booking'] ) ? absint( $_GET['hkr_booking'] ) : 0,
+			'openDate'     => HKR_Availability::valid_date( $open_date ) ? $open_date : '',
+		);
+		// phpcs:enable
+		return $config;
+	}
+
+	/**
+	 * Logo for the staff screen: the email logo from Settings, else the website's own logo.
+	 */
+	private static function logo_url() {
+		$id = (int) HKR_Settings::get( 'logo_id' );
+		if ( $id ) {
+			$src = wp_get_attachment_image_src( $id, 'full' );
+			if ( $src ) {
+				return $src[0];
+			}
+		}
+		return HKR_Mailer::site_logo_url();
+	}
+
+	/**
+	 * [hakka_staff_bookings] – the staff screen inside a normal page (the dedicated staff page uses staff_app()).
 	 */
 	public static function staff_screen() {
 		hkr_no_cache();
 		self::register_assets();
 		wp_enqueue_style( 'hkr-staff' );
-
 		if ( ! is_user_logged_in() ) {
-			ob_start();
-			?>
-			<div class="hkr-staff hkr-staff--login" style="<?php echo esc_attr( self::color_vars() ); ?>">
-				<div class="hkr-staff-login">
-					<h2><?php esc_html_e( 'Staff bookings', 'hakka-reservations' ); ?></h2>
-					<p><?php esc_html_e( 'Log in with your staff account to see and confirm bookings.', 'hakka-reservations' ); ?></p>
-					<?php
-					wp_login_form(
-						array(
-							'redirect'       => get_permalink(),
-							'remember'       => false,
-							'label_username' => __( 'Username or email', 'hakka-reservations' ),
-						)
-					);
-					?>
-					<p><a href="<?php echo esc_url( wp_lostpassword_url( get_permalink() ) ); ?>"><?php esc_html_e( 'Forgot your password?', 'hakka-reservations' ); ?></a></p>
-				</div>
-			</div>
-			<?php
-			return (string) ob_get_clean();
+			return '<div class="hkr-staff"><p><a href="' . esc_url( HKR_Roles::staff_url() ) . '">' . esc_html__( 'Log in to see bookings', 'hakka-reservations' ) . '</a></p></div>';
 		}
 		if ( ! current_user_can( 'hkr_view_bookings' ) ) {
 			return '<div class="hkr-staff"><p>' . esc_html__( 'Your account does not have access to bookings. Please ask a manager.', 'hakka-reservations' ) . '</p></div>';
 		}
-
 		wp_enqueue_script( 'hkr-staff' );
-		$user   = wp_get_current_user();
-		$config = array(
-			'api'          => esc_url_raw( rest_url( HKR_Rest::NS ) ),
-			'nonce'        => wp_create_nonce( 'wp_rest' ),
-			'canEdit'      => current_user_can( 'hkr_edit_bookings' ),
-			'pollSeconds'  => max( 10, (int) HKR_Settings::get( 'staff_poll_seconds' ) ),
-			'user'         => $user->display_name,
-			'logoutUrl'    => wp_logout_url( get_permalink() ),
-			'adminUrl'     => current_user_can( 'hkr_manage' ) ? admin_url( 'admin.php?page=hkr-bookings' ) : '',
-			'statuses'     => hkr_statuses(),
-			'sources'      => hkr_sources(),
-			'celebrations' => HKR_Settings::celebration_options(),
-			'openBooking'  => isset( $_GET['hkr_booking'] ) ? absint( $_GET['hkr_booking'] ) : 0, // phpcs:ignore WordPress.Security.NonceVerification
-			'openDate'     => isset( $_GET['hkr_date'] ) && HKR_Availability::valid_date( sanitize_text_field( wp_unslash( $_GET['hkr_date'] ) ) ) ? sanitize_text_field( wp_unslash( $_GET['hkr_date'] ) ) : '', // phpcs:ignore WordPress.Security.NonceVerification
-		);
+		$config = self::staff_config( get_permalink() );
 		return '<div class="hkr-staff" style="' . esc_attr( self::color_vars() ) . '" data-hkr-staff="' . esc_attr( wp_json_encode( $config ) ) . '"><div class="hkr-loading">' . esc_html__( 'Loading bookings…', 'hakka-reservations' ) . '</div></div>';
+	}
+
+	/**
+	 * The staff page as its own full-screen app: no theme header, footer or styles.
+	 * Logged-out visitors get a username / password login in the same style.
+	 */
+	public static function staff_app() {
+		$page_id = (int) HKR_Settings::get( 'staff_page_id' );
+		if ( ! $page_id || ! is_page( $page_id ) ) {
+			return;
+		}
+		hkr_no_cache();
+		$page_url = get_permalink( $page_id );
+		$error    = '';
+		$login    = '';
+
+		if ( isset( $_POST['hkr_staff_login'] ) ) {
+			$login = isset( $_POST['log'] ) ? sanitize_user( wp_unslash( $_POST['log'] ) ) : '';
+			if ( ! isset( $_POST['hkr_login_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['hkr_login_nonce'] ) ), 'hkr_staff_login' ) ) {
+				$error = __( 'Your login form expired. Please try again.', 'hakka-reservations' );
+			} else {
+				$user = wp_signon(
+					array(
+						'user_login'    => $login,
+						'user_password' => isset( $_POST['pwd'] ) ? (string) wp_unslash( $_POST['pwd'] ) : '', // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- passwords are not sanitized.
+						'remember'      => false,
+					),
+					is_ssl()
+				);
+				if ( is_wp_error( $user ) ) {
+					// Same message whatever went wrong, so the form never confirms a username exists.
+					$error = __( 'That username or password is not right. Please try again.', 'hakka-reservations' );
+				} else {
+					wp_safe_redirect( $page_url );
+					exit;
+				}
+			}
+		}
+
+		$title = __( 'Staff bookings', 'hakka-reservations' );
+		$logo  = self::logo_url();
+		$name  = (string) HKR_Settings::get( 'business_name' );
+		header( 'Content-Type: text/html; charset=' . get_bloginfo( 'charset' ) );
+		?>
+<!DOCTYPE html>
+<html <?php language_attributes(); ?>>
+<head>
+<meta charset="<?php bloginfo( 'charset' ); ?>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title><?php echo esc_html( $title . ' – ' . $name ); ?></title>
+<?php if ( get_site_icon_url() ) : ?><link rel="icon" href="<?php echo esc_url( get_site_icon_url( 64 ) ); ?>"><?php endif; ?>
+<link rel="stylesheet" href="<?php echo esc_url( HKR_URL . 'assets/css/staff.css?ver=' . HKR_VERSION ); ?>">
+</head>
+<body class="hkr-staff-app" style="<?php echo esc_attr( self::color_vars() ); ?>">
+		<?php if ( ! is_user_logged_in() ) : ?>
+<main class="hkr-login">
+	<div class="hkr-login__card">
+		<div class="hkr-login__brand">
+			<?php if ( $logo ) : ?>
+				<img src="<?php echo esc_url( $logo ); ?>" alt="<?php echo esc_attr( $name ); ?>" onerror="this.outerHTML='<strong><?php echo esc_js( esc_html( $name ) ); ?></strong>'">
+			<?php else : ?>
+				<strong><?php echo esc_html( $name ); ?></strong>
+			<?php endif; ?>
+		</div>
+		<form class="hkr-login__form" method="post" action="<?php echo esc_url( $page_url ); ?>">
+			<h1><?php echo esc_html( $title ); ?></h1>
+			<p class="hkr-login__intro"><?php esc_html_e( 'Log in with your staff account to see and confirm bookings.', 'hakka-reservations' ); ?></p>
+			<?php if ( $error ) : ?>
+				<p class="hkr-login__error" role="alert"><?php echo esc_html( $error ); ?></p>
+			<?php endif; ?>
+			<label for="hkr-log"><?php esc_html_e( 'Username or email', 'hakka-reservations' ); ?></label>
+			<input type="text" id="hkr-log" name="log" value="<?php echo esc_attr( $login ); ?>" autocomplete="username" autocapitalize="off" required <?php echo $error ? '' : 'autofocus'; ?>>
+			<label for="hkr-pwd"><?php esc_html_e( 'Password', 'hakka-reservations' ); ?></label>
+			<input type="password" id="hkr-pwd" name="pwd" autocomplete="current-password" required <?php echo $error ? 'autofocus' : ''; ?>>
+			<?php wp_nonce_field( 'hkr_staff_login', 'hkr_login_nonce' ); ?>
+			<button type="submit" name="hkr_staff_login" value="1"><?php esc_html_e( 'Log in', 'hakka-reservations' ); ?></button>
+			<a class="hkr-login__forgot" href="<?php echo esc_url( wp_lostpassword_url( $page_url ) ); ?>"><?php esc_html_e( 'Forgot your password?', 'hakka-reservations' ); ?></a>
+		</form>
+	</div>
+</main>
+		<?php elseif ( ! current_user_can( 'hkr_view_bookings' ) ) : ?>
+<main class="hkr-login">
+	<div class="hkr-login__card">
+		<div class="hkr-login__form">
+			<h1><?php echo esc_html( $title ); ?></h1>
+			<p class="hkr-login__intro"><?php esc_html_e( 'Your account does not have access to bookings. Please ask a manager to give you access.', 'hakka-reservations' ); ?></p>
+			<a class="hkr-login__forgot" href="<?php echo esc_url( wp_logout_url( $page_url ) ); ?>"><?php esc_html_e( 'Log out', 'hakka-reservations' ); ?></a>
+		</div>
+	</div>
+</main>
+		<?php else : ?>
+<div class="hkr-staff" data-hkr-staff="<?php echo esc_attr( wp_json_encode( self::staff_config( $page_url ) ) ); ?>"><div class="hkr-loading"><?php esc_html_e( 'Loading bookings…', 'hakka-reservations' ); ?></div></div>
+<script src="<?php echo esc_url( HKR_URL . 'assets/js/staff.js?ver=' . HKR_VERSION ); ?>"></script>
+		<?php endif; ?>
+</body>
+</html>
+		<?php
+		exit;
 	}
 }

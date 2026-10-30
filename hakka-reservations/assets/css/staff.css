@@ -140,3 +140,66 @@
 .hkr-staff-login input[type="submit"], .hkr-staff-login .button { background: var(--hkr-primary) !important; color: #fff !important; border: 0 !important; border-radius: 999px !important; padding: 12px 26px !important; font-weight: 700 !important; text-transform: none !important; cursor: pointer; }
 .hkr-staff-login input[type="submit"]:hover { background: color-mix(in srgb, var(--hkr-primary) 78%, #000) !important; }
 .hkr-staff-login label { color: #1d1d1d !important; }
+
+/* Header logo (shortcode and full-screen). */
+.hkr-s-head__brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.hkr-s-logo { display: block; height: 44px; width: auto; max-width: 160px; object-fit: contain; }
+.hkr-s-day { font-size: 18px; margin: 26px 0 4px; padding-bottom: 6px; border-bottom: 1px solid var(--hkr-line); color: var(--hkr-dark); }
+.hkr-s-day:first-child { margin-top: 6px; }
+.hkr-staff .hkr-s-day { font-family: inherit !important; color: #111 !important; text-transform: none !important; }
+.hkr-staff button.hkr-s-btn--ghost.is-active, .hkr-staff button.hkr-s-btn--ghost.is-active:hover { background: #111 !important; color: #fff !important; border-color: #111 !important; }
+.hkr-loading { padding: 40px; text-align: center; color: #666; }
+
+/* ---- Full-screen staff app (/staff-bookings/): no theme, own page. ---- */
+html, body.hkr-staff-app { margin: 0; padding: 0; }
+body.hkr-staff-app {
+	min-height: 100vh; background: #f1f1f1; color: #1d1d1d;
+	font-family: Poppins, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.45; -webkit-font-smoothing: antialiased;
+}
+body.hkr-staff-app *, body.hkr-staff-app *::before, body.hkr-staff-app *::after { box-sizing: border-box; }
+body.hkr-staff-app .hkr-staff { --hkr-primary: inherit; --hkr-dark: inherit; max-width: none; margin: 0; padding: 0 0 60px; background: transparent; border-radius: 0; min-height: 100vh; }
+body.hkr-staff-app .hkr-staff > *:not(.hkr-s-head):not(.hkr-s-toasts):not(.hkr-s-dialog) { max-width: 1100px; margin-left: auto; margin-right: auto; padding-left: 20px; padding-right: 20px; }
+body.hkr-staff-app .hkr-s-list > * { margin-left: 0; margin-right: 0; }
+body.hkr-staff-app .hkr-s-head {
+	position: sticky; top: 0; z-index: 50; background: #111; color: #fff; border-bottom: 4px solid var(--hkr-primary);
+	padding: 12px max(20px, calc((100vw - 1100px) / 2 + 20px));
+}
+body.hkr-staff-app .hkr-staff .hkr-s-title { color: #fff !important; font-size: 22px; }
+body.hkr-staff-app .hkr-s-user { color: #bdbdbd; }
+body.hkr-staff-app .hkr-staff .hkr-s-head button.hkr-s-btn--ghost, body.hkr-staff-app .hkr-staff .hkr-s-head a.hkr-s-btn--ghost { background: transparent !important; color: #fff !important; border-color: rgba(255,255,255,.45) !important; }
+body.hkr-staff-app .hkr-staff .hkr-s-head button.hkr-s-btn--ghost:hover, body.hkr-staff-app .hkr-staff .hkr-s-head a.hkr-s-btn--ghost:hover { background: rgba(255,255,255,.12) !important; border-color: #fff !important; }
+body.hkr-staff-app .hkr-staff .hkr-s-head button.hkr-s-btn--ghost.is-on { background: #1f8a4c !important; border-color: #1f8a4c !important; }
+body.hkr-staff-app .hkr-staff .hkr-s-head button:focus-visible, body.hkr-staff-app .hkr-staff .hkr-s-head a:focus-visible { outline-color: #fff !important; }
+body.hkr-staff-app .hkr-s-controls { margin-top: 18px; }
+body.hkr-staff-app .hkr-s-card { box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+body.hkr-staff-app .hkr-s-empty { background: #fff; }
+
+/* Staff login page. */
+.hkr-login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; background: #111; background: radial-gradient(circle at 50% 0%, #2a2a2a 0%, #111 65%); }
+.hkr-login__card { width: 100%; max-width: 400px; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.45); border-top: 5px solid var(--hkr-primary); }
+.hkr-login__brand { display: flex; justify-content: center; align-items: center; padding: 28px 24px 8px; }
+.hkr-login__brand img { display: block; max-width: 200px; max-height: 80px; width: auto; height: auto; }
+.hkr-login__brand strong { font-size: 24px; color: #111; }
+.hkr-login__form { display: flex; flex-direction: column; padding: 8px 28px 28px; }
+.hkr-login__form h1 { margin: 8px 0 4px; font-size: 22px; color: #111; text-align: center; }
+.hkr-login__intro { margin: 0 0 18px; color: #555; font-size: 14px; text-align: center; }
+.hkr-login__error { margin: 0 0 14px; padding: 10px 12px; border-radius: 9px; background: #fdecec; color: #9b1c1c; font-size: 14px; font-weight: 600; }
+.hkr-login__form label { font-size: 14px; font-weight: 600; color: #1d1d1d; margin: 0 0 6px; }
+.hkr-login__form input { width: 100%; font: inherit; font-size: 16px; padding: 11px 12px; margin: 0 0 14px; border: 1px solid #c4c4c4; border-radius: 9px; background: #fff; color: #1d1d1d; }
+.hkr-login__form input:focus { outline: none; border-color: var(--hkr-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hkr-primary) 30%, transparent); }
+.hkr-login__form button { margin-top: 6px; min-height: 48px; border: 0; border-radius: 999px; background: var(--hkr-primary); color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+.hkr-login__form button:hover { background: color-mix(in srgb, var(--hkr-primary) 78%, #000); }
+.hkr-login__form button:focus-visible, .hkr-login__forgot:focus-visible { outline: 3px solid #111; outline-offset: 2px; }
+.hkr-login__forgot { margin-top: 16px; text-align: center; color: #555; font-size: 14px; }
+.hkr-login__forgot:hover { color: #111; }
+
+@media (max-width: 640px) {
+	body.hkr-staff-app .hkr-s-head { padding: 10px 14px; }
+	body.hkr-staff-app .hkr-staff > *:not(.hkr-s-head):not(.hkr-s-toasts):not(.hkr-s-dialog) { padding-left: 12px; padding-right: 12px; }
+	.hkr-s-logo { height: 34px; max-width: 110px; }
+	body.hkr-staff-app .hkr-staff .hkr-s-title { font-size: 19px; }
+	.hkr-s-head__actions { width: 100%; }
+	.hkr-s-head__actions .hkr-s-btn { flex: 1 1 auto; }
+	.hkr-s-datenav { flex-wrap: wrap; }
+	body.hkr-staff-app .hkr-s-head { position: static; }
+}

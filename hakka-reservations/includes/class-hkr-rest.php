@@ -401,22 +401,25 @@ class HKR_Rest {
 		$ids    = self::staff_location_ids( (int) $req->get_param( 'location' ) );
 		$status = (string) $req->get_param( 'status' );
 		$search = trim( (string) $req->get_param( 'search' ) );
-		$args   = array(
+		$view   = 'upcoming' === $req->get_param( 'view' ) ? 'upcoming' : 'day';
+		if ( 'upcoming_pending' === $status ) { // Older screens.
+			$view   = 'upcoming';
+			$status = 'pending';
+		}
+		$args = array(
 			'location_ids' => $ids,
 			'limit'        => 300,
 		);
 		if ( '' !== $search ) {
 			$args['search']    = $search;
 			$args['date_from'] = hkr_now()->modify( '-30 days' )->format( 'Y-m-d' );
+		} elseif ( 'upcoming' === $view ) {
+			$args['date_from'] = hkr_now()->format( 'Y-m-d' );
 		} else {
 			$args['date_from'] = $date;
 			$args['date_to']   = $date;
 		}
-		if ( 'upcoming_pending' === $status ) {
-			$args['status']    = 'pending';
-			$args['date_from'] = hkr_now()->format( 'Y-m-d' );
-			unset( $args['date_to'] );
-		} elseif ( $status ) {
+		if ( $status ) {
 			$args['status'] = $status;
 		}
 		$result = HKR_Bookings::query( $args );
@@ -439,6 +442,7 @@ class HKR_Rest {
 		}
 		return rest_ensure_response(
 			array(
+				'view'      => $view,
 				'date'      => $date,
 				'dateLabel' => hkr_format_date( $date ),
 				'today'     => hkr_now()->format( 'Y-m-d' ),
