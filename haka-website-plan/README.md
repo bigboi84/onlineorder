@@ -224,7 +224,7 @@ Each location has its **own email identity**, so everything goes out from, and t
 - Both sender addresses go through a proper SMTP / transactional email service with SPF, DKIM and DMARC set up, so confirmations don't land in spam.
 - Email templates are shared but fill in the location's own details. Templates: *request received, confirmed, declined / new time suggested, reminder, cancelled, staff new-booking alert.*
 
-### 4B-4. WhatsApp
+### 4B-4. WhatsApp (DEFERRED: left out of the first build, see booking-plugin-spec.md §3.4)
 - Uses the **WhatsApp Business Cloud API** (Meta). It needs a Meta Business account, a verified number for each location (or one shared number to start) and **approved message templates**. Messages we send to start a conversation must use those templates.
 - Messages: request received, confirmed, declined / new time, 24-hour reminder, cancelled.
 - The guest ticks an opt-in box on the form. If WhatsApp fails or they opt out, the email still goes.
@@ -241,7 +241,7 @@ Each location has its **own email identity**, so everything goes out from, and t
 
 ### 4D. Decided / still open
 
-**Decided:** no deposits · WhatsApp confirmations (Business account already in place) · password-protected staff screen where staff confirm bookings · a separate email identity for each location.
+**Decided:** no deposits · every booking confirmed by staff (emails say we'll call to confirm) · WhatsApp deferred to phase 2 pending the CEO meeting · password-protected staff screen where staff confirm bookings · a separate email identity for each location.
 
 **Still open:**
 - [ ] The actual email addresses for each branch (sender and staff alert inboxes)

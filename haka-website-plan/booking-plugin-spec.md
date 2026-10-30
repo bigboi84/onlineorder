@@ -28,7 +28,8 @@
 3. **Backend options for everything else**, including time slots. Default slot = **1 hour**.
 4. **Different opening and closing hours for different days.** Weekends and Friday open at different times than weekdays.
 5. **No deposits.**
-6. **WhatsApp** confirmations. The WhatsApp Business account already exists.
+6. **WhatsApp: DEFERRED (phase 2).** Leave it out of the first build, but keep the plugin ready for it (see §3.4). The owner will ask the CEO about the WhatsApp setup, so no decision yet. The Business account already exists.
+6b. **Every booking must be confirmed by staff.** There is no auto-confirm. Emails tell the guest: *"We will call you to confirm your booking."*
 7. A **password-protected front-end screen** where staff see bookings and **confirm** them.
 8. **Email by location:** the email sent to the guest and the alert sent to staff both use the chosen location's email identity.
 9. **Booking types (seating areas) with their own capacity.** A booking is for a type, e.g. *Private room*, *Bar*, *Dining area*. Each type has a number for how many people it holds per time slot. See §3.1 "Booking types" and the Port of Spain example in §8.
@@ -49,7 +50,7 @@
 
 ## 3. Admin backend (wp-admin → "Reservations")
 
-Menu: **Reservations** with sub-pages: *Bookings · Locations · Settings · Messages & Email · WhatsApp · Reports*.
+Menu: **Reservations** with sub-pages: *Bookings · Locations · Settings · Messages & Email · Reports* (WhatsApp is added in phase 2).
 
 ### 3.1 Locations (the core screen)
 
@@ -125,8 +126,8 @@ Each location has its own list of booking types. The admin can add, rename, reor
 **Confirmation**
 | Field | Default |
 |---|---|
-| Confirmation mode | **Manual** (staff confirm). Options: manual / auto-confirm every booking / auto-confirm up to N guests |
-| Auto-confirm up to N guests | blank |
+| Confirmation | **Always manual.** Every booking is saved as *Pending* until staff confirm it. There is no auto-confirm option in the first build. |
+| Confirmation note shown to the guest | "We will call you to confirm your booking." Editable per location. |
 
 **Staff access**
 | Field | Notes |
@@ -150,13 +151,21 @@ Each location has its own list of booking types. The admin can add, rename, reor
 - Calendar file (`.ics`) attached to the confirmation email
 - All sending goes through `wp_mail()` (Post SMTP delivers it), **setting From/Reply-To/BCC from the booking's location**. Never send one location's booking from or to another location's address.
 
-### 3.4 WhatsApp
-- Settings: *Enable WhatsApp*, access token, phone number ID and business account ID (stored encrypted or at least never echoed back), API version
-- **Per-location sender**: choose which WhatsApp number/phone number ID is used for each location (or "use shared number")
-- Template mapping: each message type → the approved Meta template name and language, plus the order of placeholders
-- A **test message** button
-- Failures are logged, and the guest email still goes out
-- The guest ticks an opt-in checkbox on the form. No opt-in = no WhatsApp.
+### 3.4 WhatsApp — DEFERRED (not in the first build)
+
+**Decision (30 Oct 2026):** leave WhatsApp out for now. The owner is meeting the CEO and will ask about it. Don't build the screens below yet, but **design for it**: keep the message log table's `channel` column (`email` now, `whatsapp` later), send every message through one internal "send message" function that can gain a second channel, and store the guest's phone number in international format.
+
+Planned for phase 2 (kept here as the note):
+- Settings: *Enable WhatsApp*, access token, phone number ID and business account ID (stored encrypted, never echoed back), API version
+- **Per-location sender**: which WhatsApp number/phone number ID is used for each location (or one shared number)
+- Template mapping: each message type → the approved Meta template name and language, with the order of placeholders
+- A test message button. Failures are logged and the email still goes out.
+- A guest opt-in checkbox on the form. No opt-in = no WhatsApp.
+- Also adds: the *Message us on WhatsApp* button in guest emails, and a WhatsApp link next to the guest's phone on the staff screen
+
+**Questions to ask the CEO:** one WhatsApp number for both locations, or one each? Which number(s) are on the Business account, and is it connected to Meta's Cloud API (not only the phone app)? Who will own the Meta Business account? WhatsApp templates need Meta's approval, so allow time.
+
+---
 
 ### 3.5 Bookings (admin list)
 - WP-style table: reference, date/time, location, guest, party size, status, source, created
@@ -196,10 +205,10 @@ Index `location_id, area_id, start_datetime` and `status`.
 - Steps: **Location → Booking type → Party size → Date → Time slot → Details → Confirm**
 - Location is read from `?loc=` or the visitor's saved choice (cookie `hkr_loc`), and can be changed
 - Date picker greys out closed days and blocked dates. Time slots are the buttons for the chosen location, booking type and date, showing only slots with room (remaining space can optionally be shown, e.g. "6 spots left").
-- Fields: full name, phone, email, WhatsApp opt-in, occasion, seating preference, high chair, dietary/allergy notes, special requests, terms checkbox
+- Fields: full name, phone, email, occasion, seating preference, high chair, dietary/allergy notes, special requests, terms checkbox
 - Over the max party size: show "Please call {phone}" or send a request for approval
 - Accessible, mobile-first, styled to match the site (black/red theme, Poppins), CSS variables for colours
-- After submit: success message with the reference, plus emails and WhatsApp as above
+- After submit: success message with the reference and the line "We will call you to confirm your booking", plus the emails as above
 
 ### 5.2 Manage link (guest)
 - Signed token link from the email lets the guest view, cancel, or request a change, up to the cutoff
@@ -208,7 +217,7 @@ Index `location_id, area_id, start_datetime` and `status`.
 - Page created on activation: `/staff/bookings/` (shortcode `[hakka_staff_bookings]`), `noindex`, excluded from caching and sitemaps
 - **Login:** pick location + enter that location's password. Manager password sees all locations. Hashed, rate-limited, lockout after repeated failures, session expires after the configured time. Uses its own cookie/session, not WordPress users.
 - **Today view** (default) with date navigation and a live-refresh (polling) list. Pending count badge.
-- Each booking shows time, name, party size, phone (call and WhatsApp links), occasion, seating, allergy notes, special requests, status
+- Each booking shows time, name, party size, phone (tap to call), occasion, seating, allergy notes, special requests, status
 - Actions: **Confirm · Decline / suggest another time (with message) · Seated · Completed · No-show · Cancel · Edit · Add internal note**
 - **Add booking** (walk-in / phone)
 - Sound and pop-up alert when a new booking arrives (while the page is open)
@@ -222,7 +231,7 @@ Two emails go out for every new booking. Both are built to be **beautiful and ea
 
 ### 6.1 To the guest: "We've received your booking" / "Your booking is confirmed"
 - **From:** the location's From name and email (e.g. HAKKA Port of Spain <queenstreet@hakkarestaurant.com>). **Reply-to:** the location's email.
-- **Design:** HAKKA logo and black/red brand header, a clear status banner (*Request received* or *Confirmed*), then a summary card, then location details, then buttons.
+- **Design:** HAKKA logo and black/red brand header, a clear status banner (*Request received* or *Confirmed*). While the booking is pending, the banner reads **"We will call you to confirm your booking"**, and the status shows *Pending confirmation*, then a summary card, then location details, then buttons.
 - **Summary card (everything laid out clearly):**
   - Booking reference
   - **Location** name and full address, with a *Get directions* button
@@ -233,14 +242,14 @@ Two emails go out for every new booking. Both are built to be **beautiful and ea
   - Occasion, seating preference, high chair
   - Dietary / allergy notes and special requests
   - Status (*Pending confirmation* or *Confirmed*)
-- **Buttons:** *Add to calendar* (.ics attached too), *Manage / cancel booking*, *Call the restaurant*, *Message us on WhatsApp*
-- **Footer:** location address, phone, opening hours, the cancellation policy and a short note on what happens next ("We'll confirm shortly")
+- **Buttons:** *Add to calendar* (.ics attached too), *Manage / cancel booking*, *Call the restaurant*
+- **Footer:** location address, phone, opening hours, the cancellation policy and a short note on what happens next ("Our team will call you on {guest_phone} to confirm your booking. Your table isn't guaranteed until we do.")
 
 ### 6.2 To the location: "New booking"
 - **To:** the location's notification email(s) (e.g. queenstreet@hakkarestaurant.com for Port of Spain). **BCC:** optional.
 - **Subject** shows the key facts at a glance, e.g. `New booking: Sat 7 Nov, 6:00pm · 4 guests · Dining area · Jane Smith (HK-1042)`
 - Same clean summary card as the guest's, plus:
-  - Guest phone as a tap-to-call link and a WhatsApp link
+  - Guest phone as a tap-to-call link
   - Internal flags: *large party*, *allergy note*, *special occasion*
   - A **Confirm booking** button (opens the staff screen) and a link to the staff screen
   - How full that booking type is for that slot (e.g. `Dining area: 12 of 44 booked`)
@@ -260,13 +269,13 @@ Confirmed · Declined / new time suggested · Reminder · Cancelled · Changed. 
 
 | Event | Guest | Staff (location email) |
 |---|---|---|
-| Booking submitted | Email + WhatsApp "request received" | Email alert (+ sound on staff screen) |
-| Staff confirm | Email + WhatsApp "confirmed" + `.ics` | |
-| Staff decline / new time | Email + WhatsApp | |
+| Booking submitted (status *Pending*) | Email: "Request received. We will call you to confirm your booking." | Email alert (+ sound on the staff screen) |
+| Staff call the guest and press **Confirm** | Email: "Confirmed" + `.ics` | |
+| Staff decline / suggest a new time | Email | |
 | Guest cancels or changes | Email confirmation | Email alert |
-| Reminder (default 24h before) | Email + WhatsApp | |
+| Reminder (default 24h before, confirmed bookings only) | Email | |
 
-Auto-confirm (if enabled for the location) sends "confirmed" immediately.
+No booking is ever confirmed automatically. WhatsApp messages are added in phase 2 (§3.4).
 
 ---
 
@@ -319,7 +328,6 @@ The capacity is the number that online bookings stop at. The separate "hard maxi
 - Email routing: a booking at each location produces a guest email from that location's From address and a staff alert only to that location's email. No cross-sending.
 - Staff screen: wrong password, lockout, one location can't see another's bookings
 - Mobile and desktop form pass, keyboard use, screen-reader labels
-- Test WhatsApp templates in Meta's sandbox before going live
 - Caching: the form, availability and staff screen must never be served from the SiteGround cache (exclude their URLs/endpoints)
 
 ---
@@ -330,9 +338,9 @@ The capacity is the number that online bookings stop at. The separate "hard maxi
 2a. The booking types for Brentwood and their capacity per slot
 2b. ~~Capacity numbers~~ Decided: Port of Spain uses the higher numbers (Deanna 30, Bar 12, Dining area 48).
 2c. Should some booking types always need staff confirmation (e.g. the Deanna private room)? Does the private room have a minimum party size?
-3. WhatsApp: one number or one per location? Which number(s) are on the Business account, and are they connected to the Meta Cloud API? The message templates need Meta approval.
+3. ~~WhatsApp~~ Deferred. The owner will ask the CEO (see §3.4 for the questions).
 4. Confirm the **default slot length** at each location (1 hour assumed), and the covers limit per slot
-5. Should small parties auto-confirm, or should staff always confirm? (MotoPress is manual today.)
+5. ~~Confirmation~~ Decided: every booking is confirmed by staff, and the emails say we will call to confirm.
 6. Staff login: one password per location (the default in this spec), or individual accounts?
 7. Large parties: from what size, and a request-only flow?
 8. Is it OK to deactivate MotoPress once the new plugin is live, and are there existing bookings to import?
