@@ -291,14 +291,16 @@ Auto-confirm (if enabled for the location) sends "confirmed" immediately.
 | Slot length | 1 hour (default) |
 | Address, map link | *(still needed)* |
 
-**Booking types for Port of Spain**
+**Booking types for Port of Spain** (owner confirmed: use the higher number as the capacity)
 | Booking type | Capacity per slot | Notes |
 |---|---|---|
-| Deanna (Private) | 28 to 30 | See the question below on the two numbers |
-| Bar | 12 | |
-| Dining area | 44 to 48 | See the question below on the two numbers |
+| Deanna (Private) | **30** | |
+| Bar | **12** | |
+| Dining area | **48** | |
 
-*How I've read "28 to 30" and "44 to 48":* the lower number is the normal **capacity** that online bookings stop at, and the higher number is the **hard maximum** that staff can go up to. Please confirm this reading.
+The capacity is the number that online bookings stop at. The separate "hard maximum" field stays available in the admin, but it is left blank for Port of Spain.
+
+---
 
 ### HAKKA Brentwood
 | Field | Value |
@@ -326,7 +328,7 @@ Auto-confirm (if enabled for the location) sends "confirmed" immediately.
 1. Brentwood's email address (Port of Spain's is `queenstreet@hakkarestaurant.com`). Is it both the sender address and the staff alert inbox, or should alerts go to a different one?
 2. Port of Spain: the street address and map link. Is 254-7426 +1 868 254-7426?
 2a. The booking types for Brentwood and their capacity per slot
-2b. Confirm how to read the capacity numbers: "28 to 30" and "44 to 48" as **normal capacity / hard maximum**?
+2b. ~~Capacity numbers~~ Decided: Port of Spain uses the higher numbers (Deanna 30, Bar 12, Dining area 48).
 2c. Should some booking types always need staff confirmation (e.g. the Deanna private room)? Does the private room have a minimum party size?
 3. WhatsApp: one number or one per location? Which number(s) are on the Business account, and are they connected to the Meta Cloud API? The message templates need Meta approval.
 4. Confirm the **default slot length** at each location (1 hour assumed), and the covers limit per slot
