@@ -31,7 +31,7 @@
 6. **WhatsApp: DEFERRED (phase 2).** Leave it out of the first build, but keep the plugin ready for it (see §3.4). The owner will ask the CEO about the WhatsApp setup, so no decision yet. The Business account already exists.
 6b. **Every booking must be confirmed by staff.** There is no auto-confirm. Emails tell the guest: *"We will call you to confirm your booking."*
 7. A **password-protected front-end screen** where staff see bookings and **confirm** them.
-8. **Email by location:** the email sent to the guest and the alert sent to staff both use the chosen location's email identity.
+8. **Email by location (decided 30 Oct 2026):** the guest email is sent **from `booking@hakkarestaurant.com` for both locations**. The **staff alert goes to a different address for each location**: Port of Spain → `queenstreet@hakkarestaurant.com`, Brentwood → `booking@hakkarestaurant.com`. The staff alert address is set per location in the backend.
 9. **Booking types (seating areas) with their own capacity.** A booking is for a type, e.g. *Private room*, *Bar*, *Dining area*. Each type has a number for how many people it holds per time slot. See §3.1 "Booking types" and the Port of Spain example in §8.
 10. **Beautiful, clear booking emails.** When someone books, the **guest** gets an email and the **location's email** gets one. Both lay out all the details clearly (party size, date, time, booking type, notes). See §6.
 
@@ -71,12 +71,14 @@ A list of locations, with **Add / Edit / Deactivate**. Each location has these f
 **Email routing (the point of this plugin)**
 | Field | Type | Notes |
 |---|---|---|
-| **Booking notification email(s)** | text, comma-separated | Staff alerts for *this* location go here |
-| **From name** | text | e.g. "HAKKA Port of Spain" |
-| **From email** | email | Guest emails are sent from this address |
-| **Reply-to email** | email | Defaults to From email |
+| **Staff booking alert email(s)** | text, comma-separated | New-booking alerts for *this* location go here. Port of Spain: `queenstreet@hakkarestaurant.com`. Brentwood: `booking@hakkarestaurant.com`. |
+| **Guest email From name** | text | Defaults to the global setting (e.g. "HAKKA Restaurant"). Can be overridden per location (e.g. "HAKKA Port of Spain"). |
+| **Guest email From address** | email | **Defaults to the global setting `booking@hakkarestaurant.com`, which both locations use.** Can be overridden per location if that ever changes. |
+| **Reply-to address** | email | Defaults to the From address |
 | BCC (optional) | email | |
-| Test button | button | "Send test email to this location" |
+| Test button | button | "Send test guest email" and "Send test staff alert" for this location |
+
+The global default sender (`booking@hakkarestaurant.com`) lives in *Settings → Email*. A location only fills in its own From fields if it should differ from the default. The staff alert address is always set per location.
 
 **Opening hours (different for each day)**
 - A row for each day, Monday to Sunday, with:
@@ -227,10 +229,10 @@ Index `location_id, area_id, start_datetime` and `status`.
 
 ## 6. Booking emails (guest and location)
 
-Two emails go out for every new booking. Both are built to be **beautiful and easy to scan**: branded, mobile-friendly, with the key facts in a clear summary block at the top.
+Two emails go out for every new booking: one to the guest and one to the location's staff. Both are built to be **beautiful and easy to scan**: branded, mobile-friendly, with the key facts in a clear summary block at the top.
 
 ### 6.1 To the guest: "We've received your booking" / "Your booking is confirmed"
-- **From:** the location's From name and email (e.g. HAKKA Port of Spain <queenstreet@hakkarestaurant.com>). **Reply-to:** the location's email.
+- **From:** HAKKA Restaurant <booking@hakkarestaurant.com> (the same for both locations). **Reply-to:** `booking@hakkarestaurant.com`. The email body names the location, address and phone number the guest booked.
 - **Design:** HAKKA logo and black/red brand header, a clear status banner (*Request received* or *Confirmed*). While the booking is pending, the banner reads **"We will call you to confirm your booking"**, and the status shows *Pending confirmation*, then a summary card, then location details, then buttons.
 - **Summary card (everything laid out clearly):**
   - Booking reference
@@ -246,7 +248,7 @@ Two emails go out for every new booking. Both are built to be **beautiful and ea
 - **Footer:** location address, phone, opening hours, the cancellation policy and a short note on what happens next ("Our team will call you on {guest_phone} to confirm your booking. Your table isn't guaranteed until we do.")
 
 ### 6.2 To the location: "New booking"
-- **To:** the location's notification email(s) (e.g. queenstreet@hakkarestaurant.com for Port of Spain). **BCC:** optional.
+- **To:** the location's staff alert email: `queenstreet@hakkarestaurant.com` for Port of Spain, `booking@hakkarestaurant.com` for Brentwood. **From:** `booking@hakkarestaurant.com`. **BCC:** optional.
 - **Subject** shows the key facts at a glance, e.g. `New booking: Sat 7 Nov, 6:00pm · 4 guests · Dining area · Jane Smith (HK-1042)`
 - Same clean summary card as the guest's, plus:
   - Guest phone as a tap-to-call link
@@ -261,7 +263,7 @@ Confirmed · Declined / new time suggested · Reminder · Cancelled · Changed. 
 - Table-based HTML with inline CSS (works in Gmail, Outlook and Apple Mail), 600px wide, readable on a phone, with a plain-text version as the fallback
 - Colours and logo come from plugin settings
 - Editable in *Messages & Email*, with a live preview and a "send test" button
-- Sent with `wp_mail()` through Post SMTP, with From / Reply-To / BCC set from the booking's location
+- Sent with `wp_mail()` through Post SMTP, with the From address set from the global default (overridable per location) and the staff alert sent to the booking location's alert address
 
 ---
 
@@ -294,11 +296,13 @@ No booking is ever confirmed automatically. WhatsApp messages are added in phase
 | Field | Value |
 |---|---|
 | Slug | `port-of-spain` |
-| Notification / sender email | `queenstreet@hakkarestaurant.com` (the "Queen Street" location) |
-| Contact phone | 254-7426 (assumed +1 868 254-7426, **to confirm**) |
+| Staff booking alert email | `queenstreet@hakkarestaurant.com` |
+| Guest email sent from | `booking@hakkarestaurant.com` (shared with Brentwood) |
+| Phone | 254-7426 (+1 868 254-7426) |
+| Google Maps | https://maps.app.goo.gl/hPLKozLHLcosXHbn9 |
 | **Hours** | **Monday to Friday: 10:00am - 9:00pm · Saturday: 11:00am - 9:00pm · Sunday: Closed** |
 | Slot length | 1 hour (default) |
-| Address, map link | *(still needed)* |
+| Street address | *(still needed. The email suggests Queen Street.)* |
 
 **Booking types for Port of Spain** (owner confirmed: use the higher number as the capacity)
 | Booking type | Capacity per slot | Notes |
@@ -316,10 +320,11 @@ The capacity is the number that online bookings stop at. The separate "hard maxi
 |---|---|---|
 | Slug | `brentwood` | |
 | Address | 200 South Brentwood Avenue, Chaguanas | Footer, reservations page |
-| Phone | +1 868 334 2552 | Footer, homepage, reservations page |
-| Map | https://maps.app.goo.gl/bJTW3FgporBSnryh9 (coordinates 10.5046519, -61.4055212) | Footer, reservations page |
-| Public email | `info@hakkarestaurant.com` | Footer |
-| Dedicated booking email | *(not on the site: owner to provide, or use `info@`)* | |
+| Phone | +1-868-334-2552 | Owner, footer, homepage |
+| Google Maps | https://www.google.com/maps/place/Hakka/@10.5046519,-61.4080961,17z/data=!3m1!4b1!4m6!3m5!1s0x8c35f94d25015e3d:0xab1ec19b15869914!8m2!3d10.5046519!4d-61.4055212!16s%2Fg%2F11rz09v3lr (coordinates 10.5046519, -61.4055212). The short link https://maps.app.goo.gl/bJTW3FgporBSnryh9 is also in use on the site. | Owner, 30 Oct 2026 |
+| Public email (footer) | `info@hakkarestaurant.com` | Footer |
+| **Staff booking alert email** | **`booking@hakkarestaurant.com`** | Owner, 30 Oct 2026 |
+| Guest email sent from | `booking@hakkarestaurant.com` | Owner, 30 Oct 2026 |
 | **Hours shown to customers** | Mon-Thu 11am-11pm · Fri-Sat 11am-12am · Sun 11am-11pm | Reservations page (Fri-Sat fixed from "12pm" this session) |
 | Hours in the theme settings | "10:00am - 11:00PM" | Theme setting (not used on the page, but inconsistent) |
 | **Hours in the booking system (MotoPress)** | **10:00am-9:00pm, every day, 7 days** | MotoPress schedule |
@@ -345,8 +350,8 @@ Note: the Port of Spain hours supplied by the owner (Mon-Fri 10am-9pm) look simi
 ---
 
 ## 10. Open items for the owner
-1. Brentwood's email address (Port of Spain's is `queenstreet@hakkarestaurant.com`). Is it both the sender address and the staff alert inbox, or should alerts go to a different one?
-2. Port of Spain: the street address and map link. Is 254-7426 +1 868 254-7426?
+1. ~~Email addresses~~ Decided: guest emails come from `booking@hakkarestaurant.com` for both locations. Staff alerts go to `queenstreet@hakkarestaurant.com` (Port of Spain) and `booking@hakkarestaurant.com` (Brentwood). Both mailboxes must exist and be set up in Post SMTP (SPF/DKIM) so email delivers.
+2. Port of Spain: the street address (phone and map link are supplied)
 2a. The seating areas for Brentwood and their capacity per slot (not on the website)
 2d. Brentwood's booking hours: use the website hours, or the 10am-9pm in MotoPress? (see §8)
 2b. ~~Capacity numbers~~ Decided: Port of Spain uses the higher numbers (Deanna 30, Bar 12, Dining area 48).
