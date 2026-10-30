@@ -311,15 +311,27 @@ The capacity is the number that online bookings stop at. The separate "hard maxi
 
 ---
 
-### HAKKA Brentwood
-| Field | Value |
-|---|---|
-| Slug | `brentwood` |
-| Hours (current, as shown on the site) | Mon-Thu 11am-11pm · Fri-Sat 11am-12am · Sun 11am-11pm |
-| Address | 200 South Brentwood Avenue, Chaguanas |
-| Phone | +1 868 334 2552 |
-| Notification / sender email | *(owner to provide)* |
-| **Booking types and capacities** | *(owner to provide)* |
+### HAKKA Brentwood (found on the current website and in MotoPress, 30 Oct 2026)
+| Field | Value | Source |
+|---|---|---|
+| Slug | `brentwood` | |
+| Address | 200 South Brentwood Avenue, Chaguanas | Footer, reservations page |
+| Phone | +1 868 334 2552 | Footer, homepage, reservations page |
+| Map | https://maps.app.goo.gl/bJTW3FgporBSnryh9 (coordinates 10.5046519, -61.4055212) | Footer, reservations page |
+| Public email | `info@hakkarestaurant.com` | Footer |
+| Dedicated booking email | *(not on the site: owner to provide, or use `info@`)* | |
+| **Hours shown to customers** | Mon-Thu 11am-11pm · Fri-Sat 11am-12am · Sun 11am-11pm | Reservations page (Fri-Sat fixed from "12pm" this session) |
+| Hours in the theme settings | "10:00am - 11:00PM" | Theme setting (not used on the page, but inconsistent) |
+| **Hours in the booking system (MotoPress)** | **10:00am-9:00pm, every day, 7 days** | MotoPress schedule |
+| Time-slot step in MotoPress | 30 minutes | MotoPress settings |
+| Capacity in MotoPress | 1 booking per slot (there is no guest or seat count) | MotoPress calendar |
+| Special dates in MotoPress | Closed 16-17 Feb 2026 · 11 May 2025 (Mother's Day) custom hours 7:30pm-10:00pm | MotoPress schedule |
+| Booking types in MotoPress | Dining (categories: Birthday, Reservation) · Event · Corporate Event | MotoPress |
+| Seating areas and seat numbers | **Not on the site: owner to provide** | |
+
+**Discrepancy to settle:** the website says Brentwood is open 11am-11pm (to midnight on Fri-Sat), but the booking system only accepts bookings from 10am to 9pm every day. The new plugin needs one set of hours per day. Is the booking window meant to be shorter than opening hours (e.g. last bookings at 9pm), or are the booking hours out of date?
+
+Note: the Port of Spain hours supplied by the owner (Mon-Fri 10am-9pm) look similar to the MotoPress schedule. Worth checking that the MotoPress schedule wasn't set up with those hours in mind.
 
 ---
 
@@ -335,7 +347,8 @@ The capacity is the number that online bookings stop at. The separate "hard maxi
 ## 10. Open items for the owner
 1. Brentwood's email address (Port of Spain's is `queenstreet@hakkarestaurant.com`). Is it both the sender address and the staff alert inbox, or should alerts go to a different one?
 2. Port of Spain: the street address and map link. Is 254-7426 +1 868 254-7426?
-2a. The booking types for Brentwood and their capacity per slot
+2a. The seating areas for Brentwood and their capacity per slot (not on the website)
+2d. Brentwood's booking hours: use the website hours, or the 10am-9pm in MotoPress? (see §8)
 2b. ~~Capacity numbers~~ Decided: Port of Spain uses the higher numbers (Deanna 30, Bar 12, Dining area 48).
 2c. Should some booking types always need staff confirmation (e.g. the Deanna private room)? Does the private room have a minimum party size?
 3. ~~WhatsApp~~ Deferred. The owner will ask the CEO (see §3.4 for the questions).
